@@ -1,0 +1,1 @@
+DEFAULT_TIMEOUT_API_REQUEST = 5  # Seconds

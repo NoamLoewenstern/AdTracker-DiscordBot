@@ -4,9 +4,13 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+pytest = "*"
+pytest-xdist = "*"
+python-dotenv = "*"
 
 [packages]
 discord-py = "*"
+requests = "*"
 
 [requires]
 python_version = "3.8"
