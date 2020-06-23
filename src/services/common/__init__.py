@@ -9,7 +9,7 @@ class CommonService:
     def __init__(self, base_url: str, uri_hooks: Optional[List[Callable[[str], str]]] = None):
         self.base_url = base_url
         self.session = self.__init_session()
-        self.uri_hooks = uri_hooks if uri_hooks is not None else []
+        self.uri_hooks = uri_hooks if uri_hooks else []
 
     def __init_session(self):
         session = requests.Session()

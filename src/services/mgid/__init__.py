@@ -23,7 +23,7 @@ class MGid(CommonService):
                        extra_query_args: Optional[dict] = None,
                        fields: Optional[List[str]] = ['name', 'id']) -> list:
         result = []
-        url = urls.CAMPAIGNS.GET_LIST
+        url = urls.CAMPAIGNS.LIST_CAMPAIGNS
         if extra_query_args:
             url = update_url_params(url, extra_query_args)
         if fields:
