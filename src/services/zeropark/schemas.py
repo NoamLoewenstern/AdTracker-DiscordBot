@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class Budget(BaseModel):
-    type: str
+    type: str = None
     amount: int = None
 
 
@@ -33,12 +33,12 @@ class Details(BaseModel):
 class Stats(BaseModel):
     spent: float
     payout: float
-    averageBid: float
+    averageBid: float = None
     redirects: int
     conversions: int
-    availableVisits: float
-    returnOfInvestment: int
-    winRatio: float
+    availableVisits: int = None
+    returnOfInvestment: float
+    winRatio: float = None
     ecpa: float = None
 
 
@@ -57,6 +57,7 @@ class Summary(BaseModel):
     clicks: int
     conversions: int
     impressions: int
+    # clickThroughRate: float = None
     returnOfInvestment: float
     ecpa: float
 

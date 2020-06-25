@@ -1,3 +1,4 @@
+import logging
 from typing import Callable, List, Optional, Union
 
 import requests
@@ -24,7 +25,10 @@ class CommonService:
         kwargs.setdefault('timeout', DEFAULT_TIMEOUT_API_REQUEST)
         for uri_hook in self.uri_hooks:
             uri = uri_hook(uri)
+        logging.info(f'[REQ] [{method.upper()}] {self.base_url + uri}')
         resp = getattr(self.session, method)(self.base_url + uri, *args, **kwargs)
+        if resp.headers['Content-Type'] != 'application/json':
+            logging.error('[!] unexpected resp: is not json')
         return resp
 
     def get(self, uri: str, *args, **kwargs):
