@@ -1,5 +1,5 @@
 from json import dumps
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from urllib.parse import ParseResult, parse_qsl, unquote, urlencode, urlparse
 
 
@@ -18,7 +18,7 @@ def append_url_params(url: str, params: Dict[str, Any]):
 # def add_url_params(url: str, params: Dict[str: Any]):
 
 
-def update_url_params(url: str, params: Dict[str, Any]):
+def update_url_params(url: str, params: Optional[Dict[str, Any]]):
     """ Add GET params to provided URL being aware of existing.
 
     :param url: string of target URL
@@ -30,6 +30,8 @@ def update_url_params(url: str, params: Dict[str, Any]):
     >> add_url_params(url, new_params)
     'http://stackoverflow.com/test?data=some&data=values&answers=false'
     """
+    if params is None:
+        return url
     # Unquoting URL first so we don't loose existing args
     url = unquote(url)
     # Extracting url info
