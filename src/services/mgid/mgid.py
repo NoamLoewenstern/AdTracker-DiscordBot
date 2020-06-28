@@ -1,6 +1,6 @@
 # import os
 import json
-from typing import Callable, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 from errors import InvalidCampaignId
 from utils import alias_param, append_url_params, update_url_params
@@ -8,7 +8,8 @@ from utils import alias_param, append_url_params, update_url_params
 from ..common import CommonService
 from . import urls
 from .parameter_enums import DateIntervalParams
-from .schemas import (CampaignStat, CampaignStatDayDetailsGETResponse,
+from .schemas import (CampaignData, CampaignGETResponse, CampaignStat,
+                      CampaignStatDayDetailsGETResponse,
                       StatsAllCampaignGETResponse)
 from .utils import (add_token_to_uri, fix_date_interval_value,
                     update_client_id_in_uri)
@@ -22,6 +23,10 @@ class MGid(CommonService):
                              lambda uri: add_token_to_uri(uri, token),
                              lambda uri: update_client_id_in_uri(uri, client_id)
                          ])
+        self.campaigns: Dict[int, str] = {}  # id: name
+
+    def _update_campaigns_cache(self, updated_campaigns: List[CampaignData]):
+        self.campaigns = {campaign.id: campaign.name for campaign in updated_campaigns}
 
     def list_campaigns(self,
                        limit: int = None,
@@ -35,8 +40,12 @@ class MGid(CommonService):
         if fields:
             url = append_url_params(url, {'fields':  json.dumps(fields, separators=(',', ':'))})
         resp = self.get(url).json()
-        for _id, content in resp.items():
-            result.append({field: content[field] for field in fields})
+        resp_model = CampaignGETResponse.parse_obj(resp)
+        campaigns = resp_model.__root__.values()
+        self._update_campaigns_cache(campaigns)
+        for campaign in campaigns:
+            result.append({field: getattr(campaign, field) for field in fields})
+
         return result
 
     def stats_day_details(self,

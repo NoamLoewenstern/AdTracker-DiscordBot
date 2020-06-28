@@ -3,11 +3,6 @@ from typing import Callable, Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 
 
-class ThriveResponse(BaseModel):
-    error: bool
-    data: list
-
-
 class CampaignNameID(BaseModel):
     id: int = Field(alias='campId')
     campId: int
@@ -17,7 +12,8 @@ class CampaignNameID(BaseModel):
     source: Optional[int] = None
 
 
-class CampaignGETResponse(ThriveResponse):
+class CampaignGETResponse(BaseModel):
+    error: bool
     data: List[CampaignNameID]
 
 
@@ -49,5 +45,5 @@ class Source(SourceCache):
     variables: Dict[str, SourceVariableValue]
 
 
-class SourceGETResponse(ThriveResponse):
+class SourceGETResponse(BaseModel):
     data: List[Source]

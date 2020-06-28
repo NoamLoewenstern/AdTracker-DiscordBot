@@ -35,7 +35,6 @@ class Thrive(CommonService):
         resp_model = CampaignGETResponse(**resp)
         self._update_campaigns_cache(resp_model.data)
         result = []
-
         for campaignNameID in resp_model.data:
             result.append({field: getattr(campaignNameID, field) for field in fields})
         return result

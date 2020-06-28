@@ -11,6 +11,7 @@ from main import handle_content
 
 TEST_CAMPAING_ID = 1056026
 TEST_DATE = '2020-05-28'
+PLATFORM = 'mgid'
 
 
 def log_resp(data, test_name):
@@ -23,7 +24,7 @@ def log_resp(data, test_name):
 async def test_list_campaigns():
     limit_field = 5
     # data = mgid.list_campaigns({'limit': limit_field})
-    data = await handle_content('/mgid list')
+    data = await handle_content(f'/{PLATFORM} list')
     log_resp(data, 'list_campaigns_RESP.json')
     assert len(data) >= limit_field
 
@@ -35,7 +36,7 @@ async def test_stats_day_details():
     #     date=TEST_DATE,
     #     type='byClicksDetailed',
     # )
-    data = await handle_content(f'/mgid stats {TEST_CAMPAING_ID}')
+    data = await handle_content(f'/{PLATFORM} stats {TEST_CAMPAING_ID}')
     log_resp(data, 'stats_day_details_RESP.json')
     assert len(data) != 0
 
@@ -48,6 +49,13 @@ async def test_stats_day_details():
 #     )
 #     log_resp(data, 'stats_all_campaigns_RESP.json')
 #     assert len(data) != 0
+
+
+@pytest.mark.asyncio
+async def test_spent():
+    data = await handle_content(f'/{PLATFORM} spent {TEST_CAMPAING_ID} /fields:id,spent')
+    log_resp(data, 'spent_RESP.json')
+    assert len(data) != 0
 
 
 if __name__ == "__main__":

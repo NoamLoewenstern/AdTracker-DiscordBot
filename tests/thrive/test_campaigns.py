@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-from extensions import thrive
 from main import handle_content
 
 TEST_CAMPAING_ID = 1056026

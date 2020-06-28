@@ -4,6 +4,67 @@ from typing import Dict, List, Optional, Union
 from pydantic import BaseModel, Field, validator
 
 
+class TrackingOptions(BaseModel):
+    utm_campaign: str
+    utm_source: str
+    utm_medium: str
+    utm_custom: str
+
+
+class LimitsFilter(BaseModel):
+    limitType: str
+    dailyLimit: int
+    overallLimit: int
+    splitDailyLimitEvenly: int
+
+
+class CampaignStatistics(BaseModel):
+    click: int
+    wages: int
+
+
+class Filter(BaseModel):
+    filterType: str
+
+
+class WidgetsFilterUid(Filter):
+    widgets: List[str]
+
+
+class IPsFilter(Filter):
+    ips: List[str]
+
+
+class DomainsFilter(Filter):
+    domainsNames: List[str]
+
+
+class CampaignStatus(BaseModel):
+    id: int
+    name: str
+    reason: str
+
+
+class CampaignData(BaseModel):
+    id: int = None
+    name: str = None
+    language: int = None
+    status: CampaignStatus = None
+    domainsFilter: DomainsFilter = None
+    ipsFilter: IPsFilter = None
+    widgetsFilterUid: WidgetsFilterUid = None
+    limitsFilter: LimitsFilter = None
+    trackingOptions: TrackingOptions = None
+    targets: Dict[str, str] = None
+    languageTargeting: List[str] = None
+    whenAdd: str = None
+    campaignType: str = None
+
+
+class CampaignGETResponse(BaseModel):
+    __root__: Dict[str, CampaignData]
+
+
 class AcceptedClick(BaseModel):
     time = str
     ip = str
