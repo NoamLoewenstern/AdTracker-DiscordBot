@@ -5,9 +5,6 @@ class InvalidCommand(Exception):
         self.command = command
 
 
-InvalidCommand
-
-
 class InvalidCampaignId(Exception):
     def __init__(self, message='Invalid Campaign ID', campaign_id=''):
         super().__init__(message)

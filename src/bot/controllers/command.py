@@ -17,6 +17,7 @@ class Commands(str, Enum):
     list_campaigns = 'list_campaigns'
     campaign_stats = 'stats'
     bot_traffic = 'bot-traffic'
+    list_sources = 'list_sources'
 
 
 class CommandParser:
@@ -24,6 +25,7 @@ class CommandParser:
         patterns.LIST_CAMPAIGNS,
         patterns.CAMPAIGN_STATS,
         patterns.BOT_TRAFFIC,
+        patterns.LIST_SORCES,
     ]
 
     @classmethod
@@ -33,6 +35,7 @@ class CommandParser:
             'list': Commands.list_campaigns,
             'stats': Commands.campaign_stats,
             'bot-traffic': Commands.bot_traffic,
+            'sources': Commands.list_sources,
         }
         # TODO change this -> to actual functions
         method_factory = {
@@ -45,6 +48,7 @@ class CommandParser:
             },
             Platforms.THRIVE: {
                 Commands.list_campaigns: thrive.list_campaigns,
+                Commands.list_sources: thrive.list_sources,
             },
         }
         return method_factory[platform][command_factory[command]]
@@ -62,8 +66,8 @@ class CommandParser:
         command_args['command'] = match.group('cmd')
         command_args['platform'] = match.group('platform')
         command_args['output_format'] = cls.get_output_format_from_command(message)
-        if (extra_query_args := cls.get_extra_query_args_from_command(message)):
-            command_args['extra_query_args'] = extra_query_args
+        # if (extra_query_args := cls.get_extra_query_args_from_command(message)):
+        #     command_args['extra_query_args'] = extra_query_args
         if (fields := cls.get_fields_from_command(message)):
             command_args['fields'] = fields
 

@@ -26,7 +26,7 @@ class MGid(CommonService):
     def list_campaigns(self,
                        limit: int = None,
                        start: int = None,
-                       fields: Optional[List[str]] = ['name', 'id'],
+                       fields: List[str] = ['name', 'id'],
                        **kwargs) -> list:
         result = []
         url = urls.CAMPAIGNS.LIST_CAMPAIGNS
@@ -43,8 +43,8 @@ class MGid(CommonService):
                           campaign_id: int,
                           date: str,
                           type: str = 'byClicksDetailed',
-                          fields: Optional[List] = None,  # CampaignStatDayDetailsSummary
-                          ) -> dict:
+                          fields: List[str] = None,  # CampaignStatDayDetailsSummary
+                          **kwargs) -> dict:
         url = urls.CAMPAIGNS.STATS_DAILY_DETAILED.format(campaign_id=campaign_id)
         url = update_url_params(url, {'type': type, 'date': date})
         resp = self.get(url).json()

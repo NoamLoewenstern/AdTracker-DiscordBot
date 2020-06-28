@@ -18,46 +18,48 @@ class Thrive(CommonService):
 
     def _update_campaigns_cache(self, updated_campaigns: List[CampaignNameID]):
         for campaign in updated_campaigns:
-            self.campaigns[campaign.campId] = campaign.name
+            self.campaigns[campaign.id] = campaign.name
 
     def _update_sources_cache(self, updated_sources: List[Source]):
         for source in updated_sources:
-            self.sources[source.sourceId] = source.name
+            self.sources[source.id] = source.name
 
     def list_campaigns(self,
-                       extra_query_args: Optional[Dict[Union['search',
-                                                             'all'], Union[str, int]]] = None,
-                       fields: Optional[List[Union['name', 'id']]] = ['name', 'id']) -> list:
-        result = []
+                       search: str = None,
+                       fields: List[Union['name', 'id', 'source']] = ['name', 'id', 'source'],
+                       **kwargs) -> list:
         url = urls.CAMPAIGNS.LIST_CAMPAIGNS
-        url = update_url_params(url, extra_query_args)
+        if search:
+            url = update_url_params(url, {'search': search})
         resp = self.get(url).json()
         resp_model = CampaignGETResponse(**resp)
         self._update_campaigns_cache(resp_model.data)
+        result = []
+
         for campaignNameID in resp_model.data:
-            elem_filtered_data = {}
-            elem_filtered_data.update({
-                'id': campaignNameID.campId,
-                'name': campaignNameID.name,
-            })
-            result.append(elem_filtered_data)
+            result.append({field: getattr(campaignNameID, field) for field in fields})
         return result
 
-    def list_sources(self,
-                     extra_query_args: Optional[Dict[Union['search',
-                                                           'all'], Union[str, int]]] = None,
-                     fields: Optional[List[Union['name', 'id']]] = ['name', 'id']) -> list:
+    def list_sources(self, *,
+                     search: str = '',
+                     camps: Optional[bool] = True,
+                     all: Optional[bool] = True,
+                     back: Optional[bool] = None,
+                     fields: List[Union['name', 'id', 'campCount']] = ['name', 'id', 'campCount'],
+                     **kwargs) -> list:
         result = []
         url = urls.CAMPAIGNS.LIST_SOURCES
-        url = update_url_params(url, extra_query_args)
+        if search:
+            url = update_url_params(url, {'search': search})
+        if back:
+            url = update_url_params(url, {'back': back})
+        url = update_url_params(url, {
+            'camps': camps,
+            'all': all,
+        })
         resp = self.get(url).json()
         resp_model = SourceGETResponse(**resp)
         self._update_sources_cache(resp_model.data)
         for source in resp_model.data:
-            elem_filtered_data = {}
-            elem_filtered_data.update({
-                'id': source.sourceId,
-                'name': source.name,
-            })
-            result.append(elem_filtered_data)
+            result.append({field: getattr(source, field) for field in fields})
         return result

@@ -1,6 +1,6 @@
 from typing import Callable, Dict, List, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ThriveResponse(BaseModel):
@@ -9,6 +9,7 @@ class ThriveResponse(BaseModel):
 
 
 class CampaignNameID(BaseModel):
+    id: int = Field(alias='campId')
     campId: int
     name: str
     cpc: float = None
@@ -32,6 +33,7 @@ class SourcePostback(BaseModel):
 
 
 class SourceBase(BaseModel):
+    id: int = Field(alias='sourceId')
     sourceId: int
     name: str
 

@@ -6,6 +6,7 @@ date_interval_string = r'(?: (?P<time_interval>\w+?))'  # today | yesterday
 date_interval_combined = rf'(?: (?P<time_interval>(\d[a-z]|\w+)))'
 
 LIST_CAMPAIGNS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>camps|list)', re.IGNORECASE)
+LIST_SORCES = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>sources)', re.IGNORECASE)
 CAMPAIGN_STATS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>stats) (?P<campaign_id>\d+)'
                             + fr'{date_interval_combined}?',
                             re.IGNORECASE)

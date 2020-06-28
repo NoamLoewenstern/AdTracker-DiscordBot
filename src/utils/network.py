@@ -49,7 +49,6 @@ def update_url_params(url: str, params: Optional[Dict[str, Any]]):
         {k: dumps(v) for k, v in parsed_get_args.items()
          if isinstance(v, (bool, dict))}
     )
-    print(parsed_get_args)
 
     # Converting URL argument to proper query string
     encoded_get_args = urlencode(parsed_get_args, doseq=True)

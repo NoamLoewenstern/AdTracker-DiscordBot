@@ -1,7 +1,7 @@
 
 from typing import Dict, List, Optional, Union
 
-from pydantic import BaseModel, validator, Field
+from pydantic import BaseModel, Field, validator
 
 
 class AcceptedClick(BaseModel):
@@ -34,6 +34,7 @@ class CampaignStatDayDetailsGETResponse(BaseModel):
 
 
 class CampaignStat(BaseModel):
+    id: int = Field(alias='campaignId')
     campaignId: int
     imps: int
     clicks: int
