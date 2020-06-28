@@ -1,19 +1,53 @@
-
 import os
 from json import dumps
 from pathlib import Path
 
+import pytest
+
 from extensions import mgid
+from main import handle_content
 
 # import logging
 
+TEST_CAMPAING_ID = 1056026
+TEST_DATE = '2020-05-28'
 
-def test_list_campaigns():
+
+def log_resp(data, test_name):
+    dbg_path = Path(__file__).parent / 'responses' / test_name
+    data = data if isinstance(data, str) else dumps(data)
+    dbg_path.write_text(data)
+
+
+@pytest.mark.asyncio
+async def test_list_campaigns():
     limit_field = 5
-    data: list = mgid.list_campaigns({'limit': limit_field})
-    dbg_path = Path(__file__).parent / 'responses' / 'list_campaigns_bot_resp.json'
-    dbg_path.write_text(dumps(data))
-    assert len(data) == limit_field
+    # data = mgid.list_campaigns({'limit': limit_field})
+    data = await handle_content('/mgid list')
+    log_resp(data, 'list_campaigns_RESP.json')
+    assert len(data) >= limit_field
+
+
+@pytest.mark.asyncio
+async def test_stats_day_details():
+    # data = mgid.stats_day_details(
+    #     campaign_id=TEST_CAMPAING_ID,
+    #     date=TEST_DATE,
+    #     type='byClicksDetailed',
+    # )
+    data = await handle_content(f'/mgid stats {TEST_CAMPAING_ID}')
+    log_resp(data, 'stats_day_details_RESP.json')
+    assert len(data) != 0
+
+
+# @pytest.mark.asyncio
+# async def test_stats_all_campaigns():
+#     data = mgid.stats_all_campaigns(
+#         dateInterval='today',
+#         fields=None,  # can filter return fields
+#     )
+#     log_resp(data, 'stats_all_campaigns_RESP.json')
+#     assert len(data) != 0
 
 
 if __name__ == "__main__":

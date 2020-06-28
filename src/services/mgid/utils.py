@@ -25,3 +25,22 @@ def update_client_id_in_uri(uri: str, client_id: str) -> str:
         uri = uri.replace('%7Bclient_id%7D', client_id)
 
     return uri
+
+
+def fix_date_interval_value(date_interval: str) -> str:
+    r""" @date_interval: \d[dwmy] """
+    # allowed:
+    #    all
+    #    thisWeek
+    #    lastWeek
+    #    thisMonth
+    #    lastMonth
+    #    lastSeven
+    #    today
+    #    yesterday
+    #    last30Days
+    return {
+        '1d': 'today',
+        '7d': 'lastSeven',
+        '30d': 'last30Days',
+    }.get(date_interval.lower(), date_interval)

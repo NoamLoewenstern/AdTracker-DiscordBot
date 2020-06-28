@@ -9,3 +9,7 @@ logging.basicConfig(
     + "| %(module)s.py | %(message)s",
     datefmt=r"%d/%m/%y %H:%M:%S",
 )
+
+
+DEFAULT_OUTPUT_FORMAT = 'list'
+DEFAULT_TIME_INTERVAL = '1d'
