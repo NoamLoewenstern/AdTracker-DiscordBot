@@ -36,7 +36,7 @@ class Thrive(CommonService):
         self._update_campaigns_cache(resp_model.data)
         result = []
         for campaignNameID in resp_model.data:
-            result.append({field: getattr(campaignNameID, field) for field in fields})
+            result.append({field: getattr(campaignNameID, field) for field in fields if hasattr(campaignNameID, field)})
         return result
 
     def list_sources(self, *,
@@ -60,5 +60,5 @@ class Thrive(CommonService):
         resp_model = SourceGETResponse(**resp)
         self._update_sources_cache(resp_model.data)
         for source in resp_model.data:
-            result.append({field: getattr(source, field) for field in fields})
+            result.append({field: getattr(source, field) for field in fields if hasattr(source, field)})
         return result

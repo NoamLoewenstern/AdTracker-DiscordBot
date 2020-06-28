@@ -53,7 +53,7 @@ async def test_stats_day_details():
 
 @pytest.mark.asyncio
 async def test_spent():
-    data = await handle_content(f'/{PLATFORM} spent {TEST_CAMPAING_ID} /fields:id,spent')
+    data = await handle_content(f'/{PLATFORM} spent {TEST_CAMPAING_ID} /fields:id,name,spent')
     log_resp(data, 'spent_RESP.json')
     assert len(data) != 0
 

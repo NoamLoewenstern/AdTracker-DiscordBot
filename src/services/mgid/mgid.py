@@ -23,7 +23,17 @@ class MGid(CommonService):
                              lambda uri: add_token_to_uri(uri, token),
                              lambda uri: update_client_id_in_uri(uri, client_id)
                          ])
-        self.campaigns: Dict[int, str] = {}  # id: name
+        self.__campaigns: Dict[int, str] = {}  # id: name
+
+    @property
+    def campaigns(self):
+        if not self.__campaigns:
+            self.list_campaigns()
+        return self.__campaigns
+
+    @campaigns.setter
+    def campaigns(self, value):
+        self.__campaigns = value
 
     def _update_campaigns_cache(self, updated_campaigns: List[CampaignData]):
         self.campaigns = {campaign.id: campaign.name for campaign in updated_campaigns}
@@ -44,7 +54,8 @@ class MGid(CommonService):
         campaigns = resp_model.__root__.values()
         self._update_campaigns_cache(campaigns)
         for campaign in campaigns:
-            result.append({field: getattr(campaign, field) for field in fields})
+            result.append({field: getattr(campaign, field)
+                           for field in fields if hasattr(campaign, field)})
 
         return result
 
@@ -79,14 +90,24 @@ class MGid(CommonService):
         else:
             result = []
             for _id, stats in resp_model.campaigns_stat.items():
-                result.append({field: stats[field] for field in fields})
+                result.append({field: getattr(stats, field) for field in fields if hasattr(stats, field)})
         return result
 
     def stats_campaign(self, campaign_id, *args, **kwargs) -> list:
         result = self.stats_all_campaigns(*args, **kwargs)
         try:
-            result = [camp_data for camp_data in result if str(camp_data['campaignId']) == campaign_id][0]
+            result = [camp_data for camp_data in result if str(camp_data['id']) == campaign_id][0]
         except IndexError:
             raise InvalidCampaignId(campaign_id=campaign_id)
 
         return result
+
+    def spent_campaign(self, campaign_id, *args, **kwargs) -> list:
+        kwargs.setdefault('fields', ['id', 'spent'])
+        result = self.stats_campaign(campaign_id=campaign_id,
+                                     *args, **kwargs)
+        return {
+            'id': result['id'],
+            'name': self.campaigns[result['id']],
+            'spent': result['spent'],
+        }

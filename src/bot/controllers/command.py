@@ -15,9 +15,10 @@ from .utils import convert_resp_to_raw_string
 
 class Commands(str, Enum):
     list_campaigns = 'list_campaigns'
-    campaign_stats = 'stats'
+    stats_campaign = 'stats'
     bot_traffic = 'bot-traffic'
     list_sources = 'list_sources'
+    spent_campaign = 'spent'
 
 
 class CommandParser:
@@ -26,6 +27,7 @@ class CommandParser:
         patterns.CAMPAIGN_STATS,
         patterns.BOT_TRAFFIC,
         patterns.LIST_SORCES,
+        patterns.SPENT_CAMPAIGN,
     ]
 
     @classmethod
@@ -33,15 +35,17 @@ class CommandParser:
                                 command: Union['list', 'stats', 'bot-traffic']):
         command_factory = {
             'list': Commands.list_campaigns,
-            'stats': Commands.campaign_stats,
+            'stats': Commands.stats_campaign,
             'bot-traffic': Commands.bot_traffic,
             'sources': Commands.list_sources,
+            'spent': Commands.spent_campaign,
         }
         # TODO change this -> to actual functions
         method_factory = {
             Platforms.MGID: {
                 Commands.list_campaigns: mgid.list_campaigns,
-                Commands.campaign_stats: mgid.stats_campaign,
+                Commands.stats_campaign: mgid.stats_campaign,
+                Commands.spent_campaign: mgid.spent_campaign,
             },
             Platforms.ZEROPARK: {
                 Commands.list_campaigns: zeropark.list_campaigns,
@@ -74,14 +78,23 @@ class CommandParser:
         logging.debug(
             f"msg: {message} | matched: {match.re.pattern} | platform: {command_args['platform']}")
 
-        if match.re is patterns.LIST_CAMPAIGNS:
-            pass
-        if match.re is patterns.CAMPAIGN_STATS:
-            command_args['campaign_id'] = match.group('campaign_id')
-            command_args['time_interval'] = match.group('time_interval') or DEFAULT_TIME_INTERVAL
-        if match.re is patterns.BOT_TRAFFIC:
-            command_args['campaign_id'] = match.group('campaign_id')
-            command_args['time_interval'] = match.group('time_interval') or DEFAULT_TIME_INTERVAL
+        for group_name, default_value in [
+            ('campaign_id', None),
+            ('time_interval', DEFAULT_TIME_INTERVAL),
+        ]:
+            if (group_value := match.groupdict().get(group_name) or default_value):
+                command_args[group_name] = group_value
+        # if match.re is patterns.LIST_CAMPAIGNS:
+        #     pass
+        # if match.re is patterns.CAMPAIGN_STATS:
+        #     command_args['campaign_id'] = match.group('campaign_id')
+        #     command_args['time_interval'] = match.group('time_interval') or DEFAULT_TIME_INTERVAL
+        # if match.re is patterns.BOT_TRAFFIC:
+        #     command_args['campaign_id'] = match.group('campaign_id')
+        #     command_args['time_interval'] = match.group('time_interval') or DEFAULT_TIME_INTERVAL
+        # if match.re is patterns.SPENT_CAMPAIGN:
+        #     command_args['campaign_id'] = match.group('campaign_id')
+        #     command_args['time_interval'] = match.group('time_interval') or DEFAULT_TIME_INTERVAL
 
         command_handler = cls.platform_method_factory(command_args['platform'], command_args['command'])
         return command_handler, command_args
