@@ -41,6 +41,19 @@ async def test_stats_day_details():
     assert len(data) != 0
 
 
+@pytest.mark.asyncio
+async def test_stats_day_details_30days():
+    # data = mgid.stats_day_details(
+    #     campaign_id=TEST_CAMPAING_ID,
+    #     date=TEST_DATE,
+    #     type='byClicksDetailed',
+    # )
+    TEST_CAMPAING_ID = 1023198
+    data = await handle_content(f'/{PLATFORM} stats {TEST_CAMPAING_ID} 30d')
+    log_resp(data, 'stats_day_details_30days_RESP.json')
+    assert len(data) != 0
+
+
 # @pytest.mark.asyncio
 # async def test_stats_all_campaigns():
 #     data = mgid.stats_all_campaigns(
@@ -54,8 +67,33 @@ async def test_stats_day_details():
 @pytest.mark.asyncio
 async def test_spent():
     data = await handle_content(f'/{PLATFORM} spent {TEST_CAMPAING_ID} /fields:id,name,spent')
+    data = data if data else 'no results for spent over 0'
     log_resp(data, 'spent_RESP.json')
-    assert len(data) != 0
+    assert len(data) > 0
+
+
+@pytest.mark.asyncio
+async def test_spent_all_campaigns():
+    data = await handle_content(f'/{PLATFORM} spent /fields:id,name,spent')
+    data = data if data else 'no results for spent over 0'
+    log_resp(data, 'spent_all_campaigns_RESP.json')
+    assert len(data) > 0
+
+
+@pytest.mark.asyncio
+async def test_spent_all_campaigns_7d():
+    data = await handle_content(f'/{PLATFORM} spent /fields:id,name,spent /time_range:7d')
+    data = data if data else 'no results for spent over 0'
+    log_resp(data, 'spent_all_campaigns_7d_RESP.json')
+    assert len(data) > 0
+
+
+@pytest.mark.asyncio
+async def test_spent_all_campaigns_30d():
+    data = await handle_content(f'/{PLATFORM} spent /fields:id,name,spent /time_range:30d')
+    data = data if data else 'no results for spent over 0'
+    log_resp(data, 'spent_all_campaigns_30d_RESP.json')
+    assert len(data) > 0
 
 
 if __name__ == "__main__":

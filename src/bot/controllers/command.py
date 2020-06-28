@@ -84,6 +84,14 @@ class CommandParser:
         ]:
             if (group_value := match.groupdict().get(group_name) or default_value):
                 command_args[group_name] = group_value
+        for pattern in [
+            patterns.DATE_RANGE_FLAG,
+            patterns.TIME_RANGE_FLAG,
+        ]:
+            if (match := pattern.search(message)):
+                arg_name, value = list(match.groupdict().items())[0]
+                command_args[arg_name] = value
+
         # if match.re is patterns.LIST_CAMPAIGNS:
         #     pass
         # if match.re is patterns.CAMPAIGN_STATS:

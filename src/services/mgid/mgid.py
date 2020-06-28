@@ -1,5 +1,6 @@
 # import os
 import json
+import logging
 from typing import Callable, Dict, List, Optional, Union
 
 from errors import InvalidCampaignId
@@ -93,21 +94,24 @@ class MGid(CommonService):
                 result.append({field: getattr(stats, field) for field in fields if hasattr(stats, field)})
         return result
 
-    def stats_campaign(self, campaign_id, *args, **kwargs) -> list:
+    def stats_campaign(self, campaign_id=None, *args, **kwargs) -> list:
         result = self.stats_all_campaigns(*args, **kwargs)
-        try:
-            result = [camp_data for camp_data in result if str(camp_data['id']) == campaign_id][0]
-        except IndexError:
-            raise InvalidCampaignId(campaign_id=campaign_id)
-
+        if campaign_id is None:
+            return result  # returning list of all campaigns.
+        result = [camp_data for camp_data in result if str(camp_data['id']) == campaign_id]
         return result
 
-    def spent_campaign(self, campaign_id, *args, **kwargs) -> list:
+    def spent_campaign(self, campaign_id=None, min_spent=0.0001, *args, **kwargs) -> list:
         kwargs.setdefault('fields', ['id', 'spent'])
-        result = self.stats_campaign(campaign_id=campaign_id,
-                                     *args, **kwargs)
-        return {
-            'id': result['id'],
-            'name': self.campaigns[result['id']],
-            'spent': result['spent'],
-        }
+        results = self.stats_campaign(campaign_id=campaign_id,
+                                      *args, **kwargs)
+        filtered_results = []
+        for result in results:
+            try:
+                if result['spent'] >= min_spent:
+                    filtered_results.append({'id': result['id'],
+                                             'name': self.campaigns[result['id']],
+                                             'spent': result['spent']})
+            except KeyError as e:
+                logging.warning(f"KeyError: ID {result['id']} not listed in campaign-list\nError: {e}")
+        return filtered_results
