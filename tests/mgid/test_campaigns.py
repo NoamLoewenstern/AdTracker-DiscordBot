@@ -9,7 +9,7 @@ from main import handle_content
 
 # import logging
 
-TEST_CAMPAING_ID = 1056026
+TEST_CAMPAING_ID = 1073503
 TEST_DATE = '2020-05-28'
 PLATFORM = 'mgid'
 
@@ -25,7 +25,7 @@ async def test_list_campaigns():
     limit_field = 5
     # data = mgid.list_campaigns({'limit': limit_field})
     data = await handle_content(f'/{PLATFORM} list')
-    log_resp(data, 'list_campaigns_RESP.json')
+    log_resp(data, 'list_campaigns.json')
     assert len(data) >= limit_field
 
 
@@ -37,7 +37,7 @@ async def test_stats_day_details():
     #     type='byClicksDetailed',
     # )
     data = await handle_content(f'/{PLATFORM} stats {TEST_CAMPAING_ID}')
-    log_resp(data, 'stats_day_details_RESP.json')
+    log_resp(data, 'stats_day_details.json')
     assert len(data) != 0
 
 
@@ -48,9 +48,8 @@ async def test_stats_day_details_30days():
     #     date=TEST_DATE,
     #     type='byClicksDetailed',
     # )
-    TEST_CAMPAING_ID = 1023198
     data = await handle_content(f'/{PLATFORM} stats {TEST_CAMPAING_ID} 30d')
-    log_resp(data, 'stats_day_details_30days_RESP.json')
+    log_resp(data, 'stats_day_details_30days.json')
     assert len(data) != 0
 
 
@@ -60,7 +59,7 @@ async def test_stats_day_details_30days():
 #         dateInterval='today',
 #         fields=None,  # can filter return fields
 #     )
-#     log_resp(data, 'stats_all_campaigns_RESP.json')
+#     log_resp(data, 'stats_all_campaigns.json')
 #     assert len(data) != 0
 
 
@@ -68,7 +67,7 @@ async def test_stats_day_details_30days():
 async def test_spent():
     data = await handle_content(f'/{PLATFORM} spent {TEST_CAMPAING_ID} /fields:id,name,spent')
     data = data if data else 'no results for spent over 0'
-    log_resp(data, 'spent_RESP.json')
+    log_resp(data, 'spent.json')
     assert len(data) > 0
 
 
@@ -76,7 +75,7 @@ async def test_spent():
 async def test_spent_all_campaigns():
     data = await handle_content(f'/{PLATFORM} spent /fields:id,name,spent')
     data = data if data else 'no results for spent over 0'
-    log_resp(data, 'spent_all_campaigns_RESP.json')
+    log_resp(data, 'spent_all_campaigns.json')
     assert len(data) > 0
 
 
@@ -84,7 +83,7 @@ async def test_spent_all_campaigns():
 async def test_spent_all_campaigns_7d():
     data = await handle_content(f'/{PLATFORM} spent /fields:id,name,spent /time_range:7d')
     data = data if data else 'no results for spent over 0'
-    log_resp(data, 'spent_all_campaigns_7d_RESP.json')
+    log_resp(data, 'spent_all_campaigns_7d.json')
     assert len(data) > 0
 
 
@@ -92,9 +91,5 @@ async def test_spent_all_campaigns_7d():
 async def test_spent_all_campaigns_30d():
     data = await handle_content(f'/{PLATFORM} spent /fields:id,name,spent /time_range:30d')
     data = data if data else 'no results for spent over 0'
-    log_resp(data, 'spent_all_campaigns_30d_RESP.json')
+    log_resp(data, 'spent_all_campaigns_30d.json')
     assert len(data) > 0
-
-
-if __name__ == "__main__":
-    test_list_campaigns()

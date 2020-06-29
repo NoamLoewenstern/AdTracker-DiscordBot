@@ -9,6 +9,7 @@ from main import handle_content
 TEST_CAMPAING_ID = 1056026
 
 # import logging
+PLATFORM = 'thrive'
 
 
 def log_resp(data, test_name):
@@ -19,18 +20,28 @@ def log_resp(data, test_name):
 
 @pytest.mark.asyncio
 async def test_list_campaigns():
-    data = await handle_content('/thrive list')
+    data = await handle_content(f'/{PLATFORM} list')
     log_resp(data, 'list_campaigns_RESP.json')
     assert len(data) >= 0
 
 
 @pytest.mark.asyncio
 async def test_list_sources():
-    data = await handle_content(f'/thrive sources {TEST_CAMPAING_ID}')
+    data = await handle_content(f'/{PLATFORM} sources {TEST_CAMPAING_ID}')
     log_resp(data, 'list_sources_RESP.json')
     assert len(data) != 0
 
 
-if __name__ == "__main__":
-    test_list_campaigns()
-    test_list_sources()
+@pytest.mark.asyncio
+async def test_stats_campaigns():
+    TEST_CAMPAING_ID = 10013
+    data = await handle_content(f'/{PLATFORM} stats {TEST_CAMPAING_ID}')
+    log_resp(data, 'stats_campaigns.json')
+    assert len(data) > 0
+
+
+@pytest.mark.asyncio
+async def test_stats_campaigns_all():
+    data = await handle_content(f'/{PLATFORM} stats')
+    log_resp(data, 'stats_campaigns_all.json')
+    assert len(data) > 0

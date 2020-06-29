@@ -14,10 +14,10 @@ from .utils import convert_resp_to_raw_string
 
 
 class Commands(str, Enum):
-    list_campaigns = 'list_campaigns'
+    list_campaigns = 'list'
     stats_campaign = 'stats'
     bot_traffic = 'bot-traffic'
-    list_sources = 'list_sources'
+    list_sources = 'sources'
     spent_campaign = 'spent'
 
 
@@ -33,13 +33,6 @@ class CommandParser:
     @classmethod
     def platform_method_factory(cls, platform: Union[Platforms],
                                 command: Union['list', 'stats', 'bot-traffic']):
-        command_factory = {
-            'list': Commands.list_campaigns,
-            'stats': Commands.stats_campaign,
-            'bot-traffic': Commands.bot_traffic,
-            'sources': Commands.list_sources,
-            'spent': Commands.spent_campaign,
-        }
         # TODO change this -> to actual functions
         method_factory = {
             Platforms.MGID: {
@@ -53,9 +46,10 @@ class CommandParser:
             Platforms.THRIVE: {
                 Commands.list_campaigns: thrive.list_campaigns,
                 Commands.list_sources: thrive.list_sources,
+                Commands.stats_campaign: thrive.stats_campaigns,
             },
         }
-        return method_factory[platform][command_factory[command]]
+        return method_factory[platform][command]
 
     @classmethod
     def parse_command(cls, message: str) -> Tuple[Callable, Dict[str, Union[str, List[str]]]]:
@@ -78,12 +72,15 @@ class CommandParser:
         logging.debug(
             f"msg: {message} | matched: {match.re.pattern} | platform: {command_args['platform']}")
 
+        # params with default value
         for group_name, default_value in [
             ('campaign_id', None),
             ('time_interval', DEFAULT_TIME_INTERVAL),
         ]:
             if (group_value := match.groupdict().get(group_name) or default_value):
                 command_args[group_name] = group_value
+
+        # optional flags:
         for pattern in [
             patterns.DATE_RANGE_FLAG,
             patterns.TIME_RANGE_FLAG,

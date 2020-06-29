@@ -10,7 +10,7 @@ campaign_id = rf'(?: (?P<campaign_id>\d+))'
 LIST_CAMPAIGNS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>camps|list)', re.IGNORECASE)
 LIST_SORCES = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>sources)', re.IGNORECASE)
 CAMPAIGN_STATS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>stats)'
-                            + fr'{campaign_id}'
+                            + fr'{campaign_id}?'
                             + fr'{date_interval_combined}?',
                             re.IGNORECASE)
 BOT_TRAFFIC = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>bot-traffic)'

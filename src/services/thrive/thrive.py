@@ -5,8 +5,14 @@ from utils import append_url_params, update_url_params
 
 from ..common import CommonService
 from . import urls
-from .schemas import (CampaignGETResponse, CampaignNameID, Source, SourceBase,
-                      SourceCache, SourceGETResponse)
+from .schemas import (
+    CampaignGeneralInfo, CampaignGETResponse, CampaignNameID, CampaignStats,
+    Source, SourceBase, SourceCache, SourceGETResponse)
+
+source_mapper = {
+    3: 'MGID',
+    7: 'ZeroPark',
+}
 
 
 class Thrive(CommonService):
@@ -36,7 +42,8 @@ class Thrive(CommonService):
         self._update_campaigns_cache(resp_model.data)
         result = []
         for campaignNameID in resp_model.data:
-            result.append({field: getattr(campaignNameID, field) for field in fields if hasattr(campaignNameID, field)})
+            result.append({field: getattr(campaignNameID, field)
+                           for field in fields if hasattr(campaignNameID, field)})
         return result
 
     def list_sources(self, *,
@@ -59,6 +66,38 @@ class Thrive(CommonService):
         resp = self.get(url).json()
         resp_model = SourceGETResponse(**resp)
         self._update_sources_cache(resp_model.data)
+        for source in resp_model.data:
+            result.append({field: getattr(source, field) for field in fields if hasattr(source, field)})
+        return result
+
+    def info_campaign(self, *,
+                      campaign_id: str,
+                      fields: List[str] = ['name', 'id', 'sourceName', 'campCount'],
+                      **kwargs) -> list:
+        result = []
+        url = urls.CAMPAIGNS.CAMPAIGN_INFO
+        url = update_url_params(url, {'campId': campaign_id})
+        resp = self.get(url).json()
+        resp_model = CampaignGeneralInfo(**resp)
+        # self._update_sources_cache(resp_model.data)
+        for source in resp_model.data:
+            result.append({field: getattr(source, field) for field in fields if hasattr(source, field)})
+        return result
+
+    def stats_campaigns(self, *,
+                        campaign_id: Optional[str] = None,
+                        time_range: str = 'Today',
+                        fields: List[str] = ['name', 'id', 'clicks',
+                                             'cost', 'conv', 'ctr', 'roi', 'rev', 'profit', 'cpa'],
+                        **kwargs) -> list:
+        result = []
+        url = urls.CAMPAIGNS.CAMPAIGN_STATS
+        if campaign_id:
+            url = update_url_params(url, {'camps': campaign_id})
+        # TODO implement the 'time_range' for request.
+        # it has some problems.
+        resp = self.get(url).json()
+        resp_model = CampaignStats(**resp)
         for source in resp_model.data:
             result.append({field: getattr(source, field) for field in fields if hasattr(source, field)})
         return result
