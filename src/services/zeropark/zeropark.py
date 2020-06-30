@@ -1,5 +1,6 @@
 from typing import List, Optional, Union
 
+# from extensions import Thrive
 from utils import alias_param, append_url_params, update_url_params
 
 from ..common import CommonService
@@ -10,9 +11,10 @@ from .utils import fix_date_interval_value
 
 class ZeroPark(CommonService):
     # TODO check different types of statuses - to filter out the deleted ones
-    def __init__(self, token: str):
+    def __init__(self, token: str, thrive):
         super().__init__(base_url=urls.CAMPAIGNS.BASE_URL)
         self.session.headers.update({'api-token': token})
+        self.thrive = thrive
 
     @alias_param(alias='interval', key='time_interval',
                  callback=lambda value: fix_date_interval_value(value))

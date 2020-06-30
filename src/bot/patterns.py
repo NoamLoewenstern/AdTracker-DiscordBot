@@ -7,7 +7,9 @@ date_interval_combined = rf'(?: ?(?P<time_interval>(\d+[a-z]|\w+)))'
 campaign_id = rf'(?: (?P<campaign_id>\d+))'
 
 
-LIST_CAMPAIGNS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>camps|list)', re.IGNORECASE)
+LIST_CAMPAIGNS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>camps|list)'
+                            + fr'{campaign_id}?',
+                            re.IGNORECASE)
 LIST_SORCES = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>sources)', re.IGNORECASE)
 CAMPAIGN_STATS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>stats)'
                             + fr'{campaign_id}?'

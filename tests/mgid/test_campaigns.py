@@ -10,6 +10,7 @@ from main import handle_content
 # import logging
 
 TEST_CAMPAING_ID = 1073503
+TEST_CAMPAING_ID = 1071615
 TEST_DATE = '2020-05-28'
 PLATFORM = 'mgid'
 
@@ -30,12 +31,34 @@ async def test_list_campaigns():
 
 
 @pytest.mark.asyncio
+async def test_list_campaign_id():
+    limit_field = 5
+    # data = mgid.list_campaigns({'limit': limit_field})
+    data = await handle_content(f'/{PLATFORM} list {TEST_CAMPAING_ID}')
+    log_resp(data, 'list_campaigns_id.json')
+    assert len(data) >= limit_field
+
+
+@pytest.mark.asyncio
+async def test_stats_day_details_all_campaigns():
+    # data = mgid.stats_day_details(
+    #     campaign_id=TEST_CAMPAING_ID,
+    #     date=TEST_DATE,
+    #     type='byClicksDetailed',
+    # )
+    data = await handle_content(f'/{PLATFORM} stats')
+    log_resp(data, 'stats_day_details_all_campaigns.json')
+    assert len(data) != 0
+
+
+@pytest.mark.asyncio
 async def test_stats_day_details():
     # data = mgid.stats_day_details(
     #     campaign_id=TEST_CAMPAING_ID,
     #     date=TEST_DATE,
     #     type='byClicksDetailed',
     # )
+    TEST_CAMPAING_ID = 1071615
     data = await handle_content(f'/{PLATFORM} stats {TEST_CAMPAING_ID}')
     log_resp(data, 'stats_day_details.json')
     assert len(data) != 0

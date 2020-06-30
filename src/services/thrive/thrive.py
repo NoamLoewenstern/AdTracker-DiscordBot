@@ -1,7 +1,7 @@
 # import os
 from typing import Callable, Dict, List, Optional, Union
 
-from utils import append_url_params, update_url_params
+from utils import alias_param, append_url_params, update_url_params
 
 from ..common import CommonService
 from . import urls
@@ -84,12 +84,14 @@ class Thrive(CommonService):
             result.append({field: getattr(source, field) for field in fields if hasattr(source, field)})
         return result
 
+    @alias_param(alias='time_range', key='time_interval')
+    #  callback=lambda value: fix_date_interval_value(value.lower()))
     def stats_campaigns(self, *,
                         campaign_id: Optional[str] = None,
                         time_range: str = 'Today',
                         fields: List[str] = ['name', 'id', 'clicks',
                                              'cost', 'conv', 'ctr', 'roi', 'rev', 'profit', 'cpa'],
-                        **kwargs) -> list:
+                        **kwargs) -> List['CampaignExtendedInfoStats.dict']:
         result = []
         url = urls.CAMPAIGNS.CAMPAIGN_STATS
         if campaign_id:

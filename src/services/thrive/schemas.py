@@ -113,6 +113,10 @@ class CampaignExtendedInfoStats(CampaignGeneralInfo):
             return 0
         return self.cost / self.conv
 
+    def dict(self, *args, **kwargs):
+        return {**super().dict(*args, **kwargs),
+                'cpa': self.cpa}
+
 
 class SideCarTimeData(BaseModel):
     start: int

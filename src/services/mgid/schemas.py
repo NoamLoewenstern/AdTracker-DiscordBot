@@ -1,7 +1,50 @@
-
+import re
+from enum import Enum
 from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, validator
+
+from errors import InvalidPlatormCampaignName
+from services.thrive.schemas import CampaignExtendedInfoStats
+
+from .utils import get_thrive_id_from_camp
+
+
+class TargetType(str, Enum):
+    DESKTOP = 'DESKTOP'
+    MOBILE = 'MOB'
+    BOTH = 'BOTH'
+
+
+class CampaignBaseData(BaseModel):
+    id: int = Field(None, alias='campaignId')
+    campaignId: int = None
+    name: str = None
+
+    @property
+    def target_type(self) -> str:
+        for target_type in [
+            TargetType.DESKTOP,
+            TargetType.MOBILE,
+        ]:
+            if target_type in self.name:
+                return target_type.value
+        return TargetType.BOTH.value
+
+    @property
+    def thrive_id(self):
+        return get_thrive_id_from_camp({'id': self.id, 'name': self.name})
+
+    def dict(self, *args, **kwargs):
+        return {**super().dict(*args, **kwargs),
+                'target_type': self.target_type,
+                'thrive_id': self.thrive_id}
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __setitem__(self, key, value):
+        return setattr(self, key, value)
 
 
 class TrackingOptions(BaseModel):
@@ -28,7 +71,7 @@ class Filter(BaseModel):
 
 
 class WidgetsFilterUid(Filter):
-    widgets: List[str]
+    widgets: Dict[str, str] = None
 
 
 class IPsFilter(Filter):
@@ -45,7 +88,7 @@ class CampaignStatus(BaseModel):
     reason: str
 
 
-class CampaignData(BaseModel):
+class CampaignData(CampaignBaseData):
     id: int = None
     name: str = None
     language: int = None
@@ -94,7 +137,7 @@ class CampaignStatDayDetailsGETResponse(BaseModel):
     statistics: CampaignStatDayDetailsStatistics
 
 
-class CampaignStat(BaseModel):
+class CampaignStat(CampaignBaseData):
     id: int = Field(alias='campaignId')
     campaignId: int
     imps: int
@@ -115,3 +158,41 @@ class CampaignStat(BaseModel):
 class StatsAllCampaignGETResponse(BaseModel):
     dateInterval: str
     campaigns_stat: Dict[str, CampaignStat] = Field(alias='campaigns-stat')
+
+
+class MergedWithThriveStats(CampaignBaseData):
+    clicks: int
+    cost: float
+    conv: int
+    ctr: float
+    roi: float
+    rev: float
+    profit: float
+    # cpa: int # property
+    imps: int
+    spent: float
+    avcpc: float
+    interest: float = None
+    interestCost: float = None
+    decision: float = None
+    decisionCost: float = None
+    buying: float
+    buyingCost: float
+    epc: float
+
+    @property
+    def cpa(self) -> float:
+        if self.conv == 0:
+            return 0
+        return self.cost / self.conv
+
+    @property
+    def revenue(self) -> float:
+        return self.rev
+
+    def dict(self, *args, **kwargs):
+        return {
+            **super().dict(*args, **kwargs),
+            'cpa': self.cpa,
+            'revenue': self.revenue,
+        }

@@ -1,3 +1,4 @@
+from typing import Union
 from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
 
 

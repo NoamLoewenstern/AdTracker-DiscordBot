@@ -23,4 +23,4 @@ def convert_resp_to_raw_string(resp):
                 raw_resp.append(convert_dict_to_raw_string(item))
             else:
                 raw_resp.append(str(item))
-        return '\n'.join(raw_resp)
+        return '\n\n'.join(raw_resp)

@@ -4,6 +4,7 @@ from typing import Callable, List, Optional, Union
 import requests
 
 from constants import DEFAULT_TIMEOUT_API_REQUEST
+from errors import APIError, AuthError
 
 
 class CommonService:
@@ -29,6 +30,10 @@ class CommonService:
         resp = getattr(self.session, method)(self.base_url + uri, *args, **kwargs)
         if resp.headers['Content-Type'] != 'application/json':
             logging.error('[!] unexpected resp: is not json')
+        if not resp.ok:
+            raise APIError(platform='',
+                           data={**resp.json(), 'reason': resp.reason, 'status_code': resp.status_code},
+                           explain=resp.reason)
         return resp
 
     def get(self, uri: str, *args, **kwargs):
