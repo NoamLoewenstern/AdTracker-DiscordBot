@@ -183,5 +183,5 @@ $RECYCLE.BIN/
 docs/
 *.http
 tests/**/responses/*.json
-tests/**/responses/*.json
+tests/**/responses/*.txt
 keys.txt

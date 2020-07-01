@@ -95,6 +95,7 @@ class CampaignGeneralInfo(CampaignBasicInfo):
 
 class CampaignExtendedInfoStats(CampaignGeneralInfo):
     clicks: int
+    thrive_clicks: int = Field(alias='clicks')
     cost: float
     cpc: float
     thru: int

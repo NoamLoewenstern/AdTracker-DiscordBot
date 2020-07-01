@@ -34,9 +34,9 @@ class MessageHandler:
 
         command_handler, command_args = CommandParser.parse_command(content)
         resp = command_handler(**command_args)
-        logging.debug(f"reponse: {resp}")
+        # logging.debug(f"reponse: {resp}")
         resp = self.format_response(resp, format_type=command_args['output_format'])
-        logging.debug(f"output-format: {command_args['output_format']}\n{resp}")
+        # logging.debug(f"output-format: {command_args['output_format']}\n{resp}")
         return resp, command_args['output_format']
 
         return "Invalid Command", 'str'

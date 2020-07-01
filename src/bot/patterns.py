@@ -3,8 +3,8 @@ import re
 date = r'\d\d\d\d-\d\d-\d\d'
 date_interval = r'(?: ?(?P<time_interval>\d+[dwmy]))'  # 1d | 3d | 7d
 date_interval_string = r'(?: ?(?P<time_interval>\w+?))'  # today | yesterday
-date_interval_combined = rf'(?: ?(?P<time_interval>(\d+[a-z]|\w+)))'
-campaign_id = rf'(?: (?P<campaign_id>\d+))'
+date_interval_combined = rf'(?: ?(?P<time_interval>(\d+[dw]|\w+)))'
+campaign_id = rf'(?: (?P<campaign_id>\d+(?!\w)))'
 
 
 LIST_CAMPAIGNS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>camps|list)'
@@ -15,15 +15,16 @@ CAMPAIGN_STATS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>stats)'
                             + fr'{campaign_id}?'
                             + fr'{date_interval_combined}?',
                             re.IGNORECASE)
-BOT_TRAFFIC = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>bot-traffic)'
-                         + fr'{campaign_id}'
-                         + fr'{date_interval_combined}?',
-                         re.IGNORECASE)
 SPENT_CAMPAIGN = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>spent)'
                             + fr'{campaign_id}?'
                             + fr'{date_interval_combined}?',
                             re.IGNORECASE)
+BOT_TRAFFIC = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>bot-traffic)'
+                         + fr'{campaign_id}?'
+                         + fr'{date_interval_combined}?',
+                         re.IGNORECASE)
 
+print(BOT_TRAFFIC.pattern)
 
 OUTPUT_FORMAT = re.compile(r' /output(?:[: ])(?P<output_format>\w+)', re.IGNORECASE)
 FILTER_FIELDS = re.compile(r' /fields(?:[: ])(?P<fields>[a-z]+(?:,[a-z]*)*)', re.IGNORECASE)

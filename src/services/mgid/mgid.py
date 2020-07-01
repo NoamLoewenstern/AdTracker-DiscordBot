@@ -19,9 +19,16 @@ from .utils import (ConvertKeyToIntDict, add_token_to_uri,
                     fix_date_interval_value, get_thrive_id_from_camp,
                     update_client_id_in_uri)
 
+alias_param_dateInterval = alias_param(
+    alias='dateInterval',
+    key='time_interval',
+    callback=lambda value: fix_date_interval_value(value.lower()) if value else value
+)
+
 
 class MGid(CommonService):
     # TODO check different types of statuses - to filter out the deleted ones
+
     def __init__(self, client_id: str, token: str, thrive):
         super().__init__(base_url=urls.CAMPAIGNS.BASE_URL,
                          uri_hooks=[
@@ -103,8 +110,10 @@ class MGid(CommonService):
             result = {field: summary[field] for field in fields}
         return result
 
-    def _merge_thrive_stats(self, stats: List['CampaignStat.dict'],
-                            thrive_results: List['CampaignExtendedInfoStats.dict']) -> list:
+    def _merge_thrive_stats(self,
+                            stats: List['CampaignStat.dict'],
+                            thrive_results: List['CampaignExtendedInfoStats.dict']
+                            ) -> List['MergedWithThriveStats.dict']:
         merged = []
         for stat in stats:
             camp_thrive_id = get_thrive_id_from_camp(stat)
@@ -117,22 +126,38 @@ class MGid(CommonService):
                     logging.debug(f"\tMERGED stats: {stat}")
         return merged
 
-    @alias_param(alias='dateInterval', key='time_interval',
-                 callback=lambda value: fix_date_interval_value(value.lower()))
-    def stats_all_campaigns(self, *,
-                            dateInterval: DateIntervalParams = 'today',
-                            fields: Optional[List] = ['id', 'name', 'click', 'cost', 'conv',
-                                                      'cpa', 'roi', 'revenue', 'profit'],  # CampaignStat
-                            # revenue <- rev, profit'],  # CampaignStat
-                            **kwargs) -> List['CampaignStat.dict']:
+    @alias_param_dateInterval
+    def stats_campaign_pure_platform(self,
+                                     campaign_id: str = None,
+                                     dateInterval: DateIntervalParams = 'today',
+                                     as_json=True,
+                                     **kwargs):
         url = urls.CAMPAIGNS.STATS_DAILY
         url = update_url_params(url, {'dateInterval': dateInterval})
         resp = self.get(url).json()
         resp_model = StatsAllCampaignGETResponse(**resp)
         stats = resp_model.campaigns_stat.values()
         stats = self._removed_deleted(stats)
-        self._add_names_to_campaigns_values(stats)
-        tracker_result = self.thrive.stats_campaigns(time_interval=kwargs.get('time_interval'))
+        result = stats = self._add_names_to_campaigns_values(stats)
+        if campaign_id is not None:  # returning specific campaign
+            result = [stat for stat in stats if str(stat['id']) == campaign_id]
+        if as_json:
+            result = [stat.dict() for stat in stats]
+        return result
+
+    @alias_param_dateInterval
+    def stats_campaign(self, *,
+                       campaign_id: str = None,
+                       dateInterval: DateIntervalParams = 'today',
+                       fields: Optional[List] = ['id', 'name', 'click', 'cost', 'conv',
+                                                 'cpa', 'roi', 'revenue', 'profit'],  # CampaignStat
+                       # revenue <- rev, profit'],  # MergedWithThriveStats
+                       **kwargs) -> List['MergedWithThriveStats.dict']:
+        stats = self.stats_campaign_pure_platform(campaign_id=campaign_id, as_json=False, **kwargs)
+        tracker_result = self.thrive.stats_campaigns(
+            campaign_id=self.campaigns[campaign_id].thrive_id if campaign_id else None,
+            time_interval=kwargs.get('time_interval'),
+        )
         merged_stats = self._merge_thrive_stats(stats, tracker_result)
         if fields is None:
             result = [stat.dict() for stat in merged_stats]
@@ -140,30 +165,34 @@ class MGid(CommonService):
             result = []
             for stat in merged_stats:
                 result.append({field: getattr(stat, field) for field in fields if hasattr(stat, field)})
-        # result = self._add_names_to_campaigns_values(result)
+        # if campaign_id is not None:  # returning specific campaign
+        #     result = [camp for camp in result if str(camp['id']) == campaign_id]
         return result
 
-    def stats_campaign(self, campaign_id=None, **kwargs) -> list:
-        result: List[CampaignStat.dict] = self.stats_all_campaigns(**kwargs)
-        if campaign_id is not None:  # returning list of all campaigns.
-            result = [camp for camp in result if str(camp['id']) == campaign_id]
-        # thrive_camp_id = self.campaigns[campaign_id].thrive_id if campaign_id else None
-        # tracker_result = self.thrive.stats_campaigns(campaign_id=thrive_camp_id,
-        #                                              time_interval=kwargs.get('time_interval'))
-        # merged_results = self._merge_thrive_stats(result, tracker_result)
-        return result
+    @alias_param_dateInterval
+    def spent_campaign(self, *,
+                       campaign_id: str = None,
+                       min_spent=0.0001,
+                       dateInterval: DateIntervalParams = 'today',
+                       fields: List[str] = ['name', 'id', 'spent'],
+                       **kwargs) -> list:
+        kwargs.update({
+            'campaign_id': campaign_id,
+            'dateInterval': dateInterval,
+            'fields': fields,
+        })
+        stats = self.stats_campaign(**kwargs)
+        return [{field: stat[field]
+                 for stat in stats
+                 for field in fields
+                 if stat['spent'] >= min_spent and field in stat}]
 
-    def spent_campaign(self, campaign_id=None, min_spent=0.0001, *args, **kwargs) -> list:
-        kwargs.setdefault('fields', ['id', 'spent'])
-        results = self.stats_campaign(campaign_id=campaign_id,
-                                      *args, **kwargs)
-        filtered_results = []
-        for result in results:
-            try:
-                if result['spent'] >= min_spent:
-                    filtered_results.append({'id': result['id'],
-                                             'name': self.campaigns[result['id']],
-                                             'spent': result['spent']})
-            except KeyError as e:
-                logging.warning(f"KeyError: ID {result['id']} not listed in campaign-list\nError: {e}")
-        return filtered_results
+    @alias_param_dateInterval
+    def bot_traffic(self, *,
+                    campaign_id: str = None,
+                    fields: List[str] = ['name', 'id', 'thrive_clicks', 'platform_clicks'],
+                    **kwargs) -> list:
+        stats = self.stats_campaign(campaign_id=campaign_id, fields=fields, **kwargs)
+        return [{stat['name']: stat['thrive_clicks'] /
+                 stat['platform_clicks'] if stat['platform_clicks'] != 0 else 0}
+                for stat in stats]

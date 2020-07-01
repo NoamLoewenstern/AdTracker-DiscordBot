@@ -1,0 +1,2 @@
+class BaseCustomException(Exception):
+    pass

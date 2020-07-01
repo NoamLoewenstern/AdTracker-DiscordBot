@@ -89,7 +89,7 @@ class Thrive(CommonService):
     def stats_campaigns(self, *,
                         campaign_id: Optional[str] = None,
                         time_range: str = 'Today',
-                        fields: List[str] = ['name', 'id', 'clicks',
+                        fields: List[str] = ['name', 'id', 'clicks', 'thrive_clicks',
                                              'cost', 'conv', 'ctr', 'roi', 'rev', 'profit', 'cpa'],
                         **kwargs) -> List['CampaignExtendedInfoStats.dict']:
         result = []

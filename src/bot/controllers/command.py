@@ -21,14 +21,15 @@ class Commands(str, Enum):
     spent_campaign = 'spent'
 
 
+COMMANDS_PATTERNS = [
+    patterns.LIST_CAMPAIGNS,
+    patterns.CAMPAIGN_STATS,
+    patterns.BOT_TRAFFIC,
+    patterns.LIST_SORCES,
+    patterns.SPENT_CAMPAIGN,
+]
+
 class CommandParser:
-    COMMANDS_PATTERNS = [
-        patterns.LIST_CAMPAIGNS,
-        patterns.CAMPAIGN_STATS,
-        patterns.BOT_TRAFFIC,
-        patterns.LIST_SORCES,
-        patterns.SPENT_CAMPAIGN,
-    ]
 
     @classmethod
     def platform_method_factory(cls, platform: Union[Platforms],
@@ -39,6 +40,7 @@ class CommandParser:
                 Commands.list_campaigns: mgid.list_campaigns,
                 Commands.stats_campaign: mgid.stats_campaign,
                 Commands.spent_campaign: mgid.spent_campaign,
+                Commands.bot_traffic: mgid.bot_traffic,
             },
             Platforms.ZEROPARK: {
                 Commands.list_campaigns: zeropark.list_campaigns,
@@ -54,7 +56,7 @@ class CommandParser:
     @classmethod
     def parse_command(cls, message: str) -> Tuple[Callable, Dict[str, Union[str, List[str]]]]:
         command_args = {}
-        for pattern in cls.COMMANDS_PATTERNS:
+        for pattern in COMMANDS_PATTERNS:
             match = pattern.match(message.lower())
             if match:
                 break

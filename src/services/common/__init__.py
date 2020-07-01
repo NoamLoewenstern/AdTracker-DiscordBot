@@ -32,7 +32,10 @@ class CommonService:
             logging.error('[!] unexpected resp: is not json')
         if not resp.ok:
             raise APIError(platform='',
-                           data={**resp.json(), 'reason': resp.reason, 'status_code': resp.status_code},
+                           data={**resp.json(),
+                                 'url': self.base_url + uri,
+                                 'reason': resp.reason,
+                                 'status_code': resp.status_code},
                            explain=resp.reason)
         return resp
 

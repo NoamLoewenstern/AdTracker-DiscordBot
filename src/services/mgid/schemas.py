@@ -142,6 +142,7 @@ class CampaignStat(CampaignBaseData):
     campaignId: int
     imps: int
     clicks: int
+    platform_clicks: int = Field(alias='clicks')
     spent: float
     avcpc: float
     interest: float = None
@@ -162,6 +163,8 @@ class StatsAllCampaignGETResponse(BaseModel):
 
 class MergedWithThriveStats(CampaignBaseData):
     clicks: int
+    platform_clicks: int = None
+    thrive_clicks: int = None
     cost: float
     conv: int
     ctr: float

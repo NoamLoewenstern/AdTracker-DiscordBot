@@ -1,13 +1,16 @@
 import logging
 import os
+import traceback
 import uuid
 from json import dump, dumps
 from tempfile import NamedTemporaryFile
+from textwrap import wrap
 from typing import Union
 
 import discord
-from textwrap import wrap
+
 from bot.controllers import MessageHandler
+from errors import BaseCustomException
 
 TOKEN = os.environ['DISCORD_TOKEN']
 GUILD = os.environ['DISCORD_GUILD']
@@ -30,8 +33,21 @@ async def on_ready():
 async def handle_content(content):
     resp: Union[dict, list, str]
     output_format: Union['json', 'list', 'str', 'csv']
-    resp, output_format = MESSAGE_HANDLER.handle_message(content)
-    # for now - not doing anything with output_format, and asuming all responses ar ein str format.
+    try:
+        resp, output_format = MESSAGE_HANDLER.handle_message(content)
+        # for now - not doing anything with output_format, and asuming all responses ar ein str format.
+    except Exception as err:
+        err_resp = {
+            "Response": "ERROR",
+            "Type": "Internal Error",
+        }
+        if isinstance(err, BaseCustomException):
+            logging.error(f'[!] ERROR: {err.dict()}')
+            err_resp['message'] = err.message
+        else:
+            logging.error(f'[!] ERROR: {err}')
+        traceback.print_tb(err.__traceback__)
+        return err_resp
 
     return resp
 
