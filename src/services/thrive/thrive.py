@@ -1,7 +1,8 @@
 # import os
 from typing import Callable, Dict, List, Optional, Union
 
-from utils import alias_param, append_url_params, update_url_params
+from utils import (alias_param, append_url_params, filter_result_by_fields,
+                   update_url_params)
 
 from ..common import CommonService
 from . import urls
@@ -40,10 +41,7 @@ class Thrive(CommonService):
         resp = self.get(url).json()
         resp_model = CampaignGETResponse(**resp)
         self._update_campaigns_cache(resp_model.data)
-        result = []
-        for campaignNameID in resp_model.data:
-            result.append({field: getattr(campaignNameID, field)
-                           for field in fields if hasattr(campaignNameID, field)})
+        result = filter_result_by_fields(resp_model.data, fields)
         return result
 
     def list_sources(self, *,
@@ -53,7 +51,6 @@ class Thrive(CommonService):
                      back: Optional[bool] = None,
                      fields: List[Union['name', 'id', 'campCount']] = ['name', 'id', 'campCount'],
                      **kwargs) -> list:
-        result = []
         url = urls.CAMPAIGNS.LIST_SOURCES
         if search:
             url = update_url_params(url, {'search': search})
@@ -66,22 +63,19 @@ class Thrive(CommonService):
         resp = self.get(url).json()
         resp_model = SourceGETResponse(**resp)
         self._update_sources_cache(resp_model.data)
-        for source in resp_model.data:
-            result.append({field: getattr(source, field) for field in fields if hasattr(source, field)})
+        result = filter_result_by_fields(resp_model.data, fields)
         return result
 
     def info_campaign(self, *,
                       campaign_id: str,
                       fields: List[str] = ['name', 'id', 'sourceName', 'campCount'],
                       **kwargs) -> list:
-        result = []
         url = urls.CAMPAIGNS.CAMPAIGN_INFO
         url = update_url_params(url, {'campId': campaign_id})
         resp = self.get(url).json()
         resp_model = CampaignGeneralInfo(**resp)
         # self._update_sources_cache(resp_model.data)
-        for source in resp_model.data:
-            result.append({field: getattr(source, field) for field in fields if hasattr(source, field)})
+        result = filter_result_by_fields(resp_model.data, fields)
         return result
 
     @alias_param(alias='time_range', key='time_interval')
@@ -92,7 +86,6 @@ class Thrive(CommonService):
                         fields: List[str] = ['name', 'id', 'clicks', 'thrive_clicks',
                                              'cost', 'conv', 'ctr', 'roi', 'rev', 'profit', 'cpa'],
                         **kwargs) -> List['CampaignExtendedInfoStats.dict']:
-        result = []
         url = urls.CAMPAIGNS.CAMPAIGN_STATS
         if campaign_id:
             url = update_url_params(url, {'camps': campaign_id})
@@ -100,6 +93,5 @@ class Thrive(CommonService):
         # it has some problems.
         resp = self.get(url).json()
         resp_model = CampaignStats(**resp)
-        for source in resp_model.data:
-            result.append({field: getattr(source, field) for field in fields if hasattr(source, field)})
+        result = filter_result_by_fields(resp_model.data, fields)
         return result

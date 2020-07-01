@@ -4,7 +4,7 @@ from typing import Callable, List, Optional, Union
 import requests
 
 from constants import DEFAULT_TIMEOUT_API_REQUEST
-from errors import APIError, AuthError
+from errors import APIError
 
 
 class CommonService:
@@ -28,7 +28,7 @@ class CommonService:
             uri = uri_hook(uri)
         logging.info(f'[REQ] [{method.upper()}] {self.base_url + uri}')
         resp = getattr(self.session, method)(self.base_url + uri, *args, **kwargs)
-        if resp.headers['Content-Type'] != 'application/json':
+        if 'application/json' not in resp.headers['Content-Type']:
             logging.error('[!] unexpected resp: is not json')
         if not resp.ok:
             raise APIError(platform='',

@@ -1,21 +1,21 @@
 import json
 # import os
 import logging
-import re
-from typing import Callable, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from errors import InvalidCampaignId, InvalidPlatormCampaignName
 # from services.thrive import Thrive
-from utils import alias_param, append_url_params, update_url_params
+from utils import (alias_param, append_url_params, filter_result_by_fields,
+                   update_url_params)
 
 from ..common import CommonService
-from ..thrive.schemas import CampaignExtendedInfoStats
+# from ..thrive.schemas import CampaignExtendedInfoStats
 from . import urls
 from .parameter_enums import DateIntervalParams
 from .schemas import (CampaignBaseData, CampaignData, CampaignGETResponse,
                       CampaignStat, CampaignStatDayDetailsGETResponse,
                       MergedWithThriveStats, StatsAllCampaignGETResponse)
-from .utils import (ConvertKeyToIntDict, add_token_to_uri,
+from .utils import (DictForcedStringKeys, add_token_to_uri,
                     fix_date_interval_value, get_thrive_id_from_camp,
                     update_client_id_in_uri)
 
@@ -35,12 +35,12 @@ class MGid(CommonService):
                              lambda uri: add_token_to_uri(uri, token),
                              lambda uri: update_client_id_in_uri(uri, client_id)
                          ])
-        self.__campaigns: Dict[int, str] = {}  # id: name
+        self.__campaigns: Dict[str, Any] = None
         self.thrive = thrive
 
     @property
     def campaigns(self):
-        if not self.__campaigns:
+        if self.__campaigns is None:
             filter_fields = ['id', 'name', 'status', 'statistics']
             url = urls.CAMPAIGNS.LIST_CAMPAIGNS
             url = append_url_params(url, {'fields': json.dumps(filter_fields, separators=(',', ':'))})
@@ -48,15 +48,12 @@ class MGid(CommonService):
             resp_model = CampaignGETResponse.parse_obj(resp)
             campaigns = resp_model.__root__.values()
 
-            self.__campaigns = {campaign.id: campaign for campaign in campaigns}
-            self.__campaigns = ConvertKeyToIntDict(self.campaigns)
+            self.__campaigns = DictForcedStringKeys({campaign.id: campaign for campaign in campaigns})
         return self.__campaigns
 
     @campaigns.setter
-    def campaigns(self, value):
-        if isinstance(value, dict):
-            value = ConvertKeyToIntDict(value)
-        self.__campaigns = value
+    def campaigns(self, d: dict):
+        self.__campaigns = DictForcedStringKeys(d)
 
     def _removed_deleted(self, campaigns: List[Union[CampaignBaseData, Dict['id', str]]]):
         return [camp for camp in campaigns if camp['id'] in self.campaigns]
@@ -72,7 +69,6 @@ class MGid(CommonService):
                        campaign_id: int = None,
                        fields: List[str] = ['name', 'id'],
                        **kwargs) -> list:
-        result = []
         url = urls.CAMPAIGNS.LIST_CAMPAIGNS
         if campaign_id is not None:
             url = urls.CAMPAIGNS.LIST_CAMPAIGNS + '/' + str(campaign_id)
@@ -88,10 +84,7 @@ class MGid(CommonService):
             resp_model = CampaignData(**resp)
             campaigns = [resp_model]
 
-        for campaign in campaigns:
-            result.append({field: getattr(campaign, field)
-                           for field in fields if hasattr(campaign, field)})
-
+        result = filter_result_by_fields(campaigns, fields)
         return result
 
     def stats_day_details(self,
@@ -149,8 +142,8 @@ class MGid(CommonService):
     def stats_campaign(self, *,
                        campaign_id: str = None,
                        dateInterval: DateIntervalParams = 'today',
-                       fields: Optional[List] = ['id', 'name', 'click', 'cost', 'conv',
-                                                 'cpa', 'roi', 'revenue', 'profit'],  # CampaignStat
+                       fields: Optional[List[str]] = ['id', 'name', 'clicks', 'cost', 'conv',
+                                                      'cpa', 'roi', 'revenue', 'profit'],  # CampaignStat
                        # revenue <- rev, profit'],  # MergedWithThriveStats
                        **kwargs) -> List['MergedWithThriveStats.dict']:
         stats = self.stats_campaign_pure_platform(campaign_id=campaign_id, as_json=False, **kwargs)
@@ -162,9 +155,7 @@ class MGid(CommonService):
         if fields is None:
             result = [stat.dict() for stat in merged_stats]
         else:
-            result = []
-            for stat in merged_stats:
-                result.append({field: getattr(stat, field) for field in fields if hasattr(stat, field)})
+            result = filter_result_by_fields(merged_stats, fields)
         # if campaign_id is not None:  # returning specific campaign
         #     result = [camp for camp in result if str(camp['id']) == campaign_id]
         return result
@@ -182,10 +173,9 @@ class MGid(CommonService):
             'fields': fields,
         })
         stats = self.stats_campaign(**kwargs)
-        return [{field: stat[field]
-                 for stat in stats
-                 for field in fields
-                 if stat['spent'] >= min_spent and field in stat}]
+        filtered_by_spent = [stat for stat in stats if stat['spent'] >= min_spent]
+        result = filter_result_by_fields(filtered_by_spent, fields)
+        return result
 
     @alias_param_dateInterval
     def bot_traffic(self, *,

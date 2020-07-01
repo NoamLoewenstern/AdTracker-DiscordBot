@@ -63,9 +63,3 @@ def get_thrive_id_from_camp(camp: Dict[Union['id', 'name'], Union[str, int]],
         logging.error(f'[!] {err_msg}')
         return None
     return match.group('thrive_camp_id')
-
-
-class ConvertKeyToIntDict(dict):
-    def __getitem__(self, key: Union[int, str]):
-        val = dict.__getitem__(self, int(key))
-        return val
