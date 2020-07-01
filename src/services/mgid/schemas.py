@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, validator
 from errors import InvalidPlatormCampaignName
 from services.thrive.schemas import CampaignExtendedInfoStats
 
+from ..common.schemas import BaseModel
 from .utils import get_thrive_id_from_camp
 
 
@@ -40,12 +41,6 @@ class CampaignBaseData(BaseModel):
                 'target_type': self.target_type,
                 'thrive_id': self.thrive_id}
 
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def __setitem__(self, key, value):
-        return setattr(self, key, value)
-
 
 class TrackingOptions(BaseModel):
     utm_campaign: str
@@ -62,7 +57,7 @@ class LimitsFilter(BaseModel):
 
 
 class CampaignStatistics(BaseModel):
-    click: int
+    clicks: int
     wages: int
 
 

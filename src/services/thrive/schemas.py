@@ -1,6 +1,8 @@
 from typing import Callable, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from ..common.schemas import BaseModel
 
 
 class CampaignBasicInfo(BaseModel):

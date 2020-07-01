@@ -44,6 +44,8 @@ class CommandParser:
             },
             Platforms.ZEROPARK: {
                 Commands.list_campaigns: zeropark.list_campaigns,
+                Commands.stats_campaign: zeropark.stats_campaign,
+                Commands.spent_campaign: zeropark.spent_campaign,
             },
             Platforms.THRIVE: {
                 Commands.list_campaigns: thrive.list_campaigns,

@@ -1,6 +1,11 @@
 from typing import Callable, List, Optional, Union
 
-from pydantic import BaseModel
+from ..common.schemas import BaseModel
+
+
+class CampaignBaseData(BaseModel):
+    id: str
+    name: str
 
 
 class Budget(BaseModel):
@@ -13,10 +18,8 @@ class State(BaseModel):
     actions: List[Union["EDIT", "PAUSE", "CHANGE_BID", "DUPLICATE", "DELETE"]]
 
 
-class Details(BaseModel):
+class Details(CampaignBaseData):
     # details:
-    id: str
-    name: str
     geo: str
     type: str
     trafficSourceType: List[str]
@@ -33,11 +36,12 @@ class Details(BaseModel):
 class Stats(BaseModel):
     spent: float
     payout: float
-    averageBid: float = None
     redirects: int
+    clicks: int = None
     conversions: int
+    averageBid: float = None
     availableVisits: int = None
-    returnOfInvestment: float
+    returnOfInvestment: float = None
     winRatio: float = None
     ecpa: float = None
 
@@ -49,22 +53,30 @@ class CampaignElement(BaseModel):
     currentConversionCappingConversions: bool = None
 
 
-class Summary(BaseModel):
-    spent: float
-    payout: float
-    averageBid: float
-    redirects: int
-    clicks: int
-    conversions: int
-    impressions: int
-    # clickThroughRate: float = None
-    returnOfInvestment: float
-    ecpa: float
+class Summary(Stats):
+    impressions: int = None
 
 
 class CampaignStatsResponse(BaseModel):
-    page: int
-    total: int
-    limit: int
-    summary: Summary
-    elements: List[CampaignElement]
+    page: int = None
+    total: int = None
+    limit: int = None
+    summary: Summary = None
+    elements: List[CampaignElement] = None
+
+
+class ExtendedStats(Stats):
+    # includes: Stats
+    # includes: Details Data:
+    id: str
+    name: str
+    geo: str
+    type: str
+    totalBudget: Budget
+    dailyBudget: Budget
+    bid: float
+    state: State
+
+
+class ListExtendedStats(BaseModel):
+    __root__: List[ExtendedStats]
