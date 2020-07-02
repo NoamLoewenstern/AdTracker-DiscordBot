@@ -8,7 +8,7 @@ from ..common import CommonService
 from . import urls
 from .schemas import (
     CampaignGeneralInfo, CampaignGETResponse, CampaignNameID, CampaignStats,
-    Source, SourceBase, SourceCache, SourceGETResponse)
+    Source, SourceGETResponse)
 
 source_mapper = {
     3: 'MGID',
@@ -22,6 +22,7 @@ class Thrive(CommonService):
         self.session.headers.update({'apiKey': apiKey, 'installId': installId})
         self.campaigns: Dict[int, str] = {}
         self.sources: Dict[int, str] = {}
+        self.platforms: List[CommonService] = []  # : List[PlatformService]
 
     def _update_campaigns_cache(self, updated_campaigns: List[CampaignNameID]):
         for campaign in updated_campaigns:
@@ -85,6 +86,7 @@ class Thrive(CommonService):
                         time_range: str = 'Today',
                         fields: List[str] = ['name', 'id', 'clicks', 'thrive_clicks',
                                              'cost', 'conv', 'ctr', 'roi', 'rev', 'profit', 'cpa'],
+                        as_json=True,
                         **kwargs) -> List['CampaignExtendedInfoStats.dict']:
         url = urls.CAMPAIGNS.CAMPAIGN_STATS
         if campaign_id:
@@ -92,6 +94,8 @@ class Thrive(CommonService):
         # TODO implement the 'time_range' for request.
         # it has some problems.
         resp = self.get(url).json()
-        resp_model = CampaignStats(**resp)
-        result = filter_result_by_fields(resp_model.data, fields)
+        result = resp_model = CampaignStats(**resp)
+        if as_json:
+            result = [stat.dict() for stat in resp_model.data]
+        result = filter_result_by_fields(result, fields)
         return result

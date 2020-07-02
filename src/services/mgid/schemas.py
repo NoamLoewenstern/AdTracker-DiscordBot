@@ -1,20 +1,14 @@
-import re
 from enum import Enum
 from typing import Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, validator
+from pydantic import Field
 
 from errors import InvalidPlatormCampaignName
 from services.thrive.schemas import CampaignExtendedInfoStats
 
+from ..common import TargetType
+from ..common.platform import get_thrive_id_from_camp
 from ..common.schemas import BaseModel
-from .utils import get_thrive_id_from_camp
-
-
-class TargetType(str, Enum):
-    DESKTOP = 'DESKTOP'
-    MOBILE = 'MOB'
-    BOTH = 'BOTH'
 
 
 class CampaignBaseData(BaseModel):
@@ -156,9 +150,8 @@ class StatsAllCampaignGETResponse(BaseModel):
     campaigns_stat: Dict[str, CampaignStat] = Field(alias='campaigns-stat')
 
 
-class MergedWithThriveStats(CampaignBaseData):
-    clicks: int
-    platform_clicks: int = None
+class MergedWithThriveStats(CampaignStat):
+    # thrive stat data:
     thrive_clicks: int = None
     cost: float
     conv: int
@@ -166,17 +159,14 @@ class MergedWithThriveStats(CampaignBaseData):
     roi: float
     rev: float
     profit: float
+    # non default fields for merge data with thrive
+    imps: int = None
+    cpc: float = None
+    thru: int = None
+    cvr: float = None
+    # epc: float # platfrom contradiction
+    # epa: float # platfrom contradiction
     # cpa: int # property
-    imps: int
-    spent: float
-    avcpc: float
-    interest: float = None
-    interestCost: float = None
-    decision: float = None
-    decisionCost: float = None
-    buying: float
-    buyingCost: float
-    epc: float
 
     @property
     def cpa(self) -> float:

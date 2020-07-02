@@ -1,10 +1,5 @@
-import logging
-import os
-import re
 from typing import Dict, Optional, Union
 from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
-
-from errors import InvalidPlatormCampaignName
 
 
 def add_token_to_uri(uri: str, token: str) -> str:
@@ -50,16 +45,3 @@ def fix_date_interval_value(date_interval: str) -> str:
         '7d': 'lastSeven',
         '30d': 'last30Days',
     }.get(date_interval.lower(), date_interval)
-
-
-def get_thrive_id_from_camp(camp: Dict[Union['id', 'name'], Union[str, int]],
-                            raise_=not os.getenv('DEBUG')) -> Optional[int]:
-    if not (match := re.match(r'(?P<thrive_camp_id>\d+) ', camp['name'])):
-        err_msg = f"Camp {camp['id']} Named '{camp['name']}' Doesn't Contain THRIVE Camp-ID."
-        if raise_:
-            raise InvalidPlatormCampaignName(
-                platform='MGID',
-                data=err_msg)
-        logging.error(f'[!] {err_msg}')
-        return None
-    return match.group('thrive_camp_id')

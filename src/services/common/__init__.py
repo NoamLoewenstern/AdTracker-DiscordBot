@@ -1,10 +1,17 @@
 import logging
+from enum import Enum
 from typing import Callable, List, Optional, Union
 
 import requests
 
 from constants import DEFAULT_TIMEOUT_API_REQUEST
 from errors import APIError
+
+
+class TargetType(str, Enum):
+    DESKTOP = 'DESKTOP'
+    MOBILE = 'MOB'
+    BOTH = 'BOTH'
 
 
 class CommonService:

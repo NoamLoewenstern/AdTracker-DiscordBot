@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-from extensions import zeropark
 from main import handle_content
 
 # import logging
@@ -82,3 +81,24 @@ async def test_spent_all_campaigns_30d():
     data = data if data else 'no results for spent over 0'
     assert log_resp(data, 'spent_all_campaigns_30d.txt')
     assert len(data) > 0
+
+
+@pytest.mark.asyncio
+async def test_bot_traffic_1d():
+    data = await handle_content(f'/{PLATFORM} bot-traffic {TEST_CAMPAING_ID} 1d')
+    assert log_resp(data, 'bot_traffic_1d.txt')
+    assert len(data) != 0
+
+
+@pytest.mark.asyncio
+async def test_bot_traffic_7d():
+    data = await handle_content(f'/{PLATFORM} bot-traffic {TEST_CAMPAING_ID} 7d')
+    assert log_resp(data, 'bot_traffic_7d.txt')
+    assert len(data) != 0
+
+
+@pytest.mark.asyncio
+async def test_bot_traffic_all_campaigns_7d():
+    data = await handle_content(f'/{PLATFORM} bot-traffic 7d')
+    assert log_resp(data, 'bot_traffic_all_campaigns_7d.txt')
+    assert len(data) != 0

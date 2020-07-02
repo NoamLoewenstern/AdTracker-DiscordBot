@@ -20,6 +20,8 @@ def alias_param(alias: str, key: str,
 
 
 def filter_result_by_fields(result: List[Union[BaseModel, Dict[str, Any]]], fields: List[str]):
+    if not fields:
+        return result
     return [{field: obj[field]
              for field in fields
              if field in obj}
