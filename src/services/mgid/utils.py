@@ -1,12 +1,9 @@
-import re
-from datetime import date, timedelta
-from functools import wraps
+
 from typing import Dict, Optional, Union
 from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
 
+from bot.patterns import NON_BASE_DATE_INTERVAL_RE
 from errors import InvalidCommandFlag
-
-NON_BASE_DATE_INTERVAL_RE = re.compile('([2-689]|[12][0-9])d')
 
 
 def add_token_to_uri(uri: str, token: str) -> str:
@@ -58,36 +55,3 @@ def fix_date_interval_value(date_interval: str) -> str:
     if (match := NON_BASE_DATE_INTERVAL_RE.match(date_interval)):
         return 'interval'
     raise InvalidCommandFlag(flag='time_range')
-
-
-def add_interval_startend_dates_by_dateInterval(
-    original_time_interval='time_interval',
-    converted_date_interval='dateInterval',
-):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            """  Adding 'startDate' 'endDate' to kwargs, by dateInterval """
-            # result from func: fix_date_interval_value
-            if kwargs.get(converted_date_interval) != 'interval':
-                kwargs.update({
-                    'startDate': None,
-                    'endDate': None,
-                })
-            else:
-                match = NON_BASE_DATE_INTERVAL_RE.match(kwargs[original_time_interval])
-                days_back = int(match.groups()[0])
-
-                today = date.today()
-                from_date = today - timedelta(days=days_back)
-                startDate = from_date.strftime("%Y-%m-%d")
-                endDate = today.strftime("%Y-%m-%d")
-
-                kwargs.update({
-                    'startDate': startDate,
-                    'endDate': endDate,
-                })
-
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator

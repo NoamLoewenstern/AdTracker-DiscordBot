@@ -10,27 +10,25 @@ from utils import (DictForcedStringKeys, alias_param, append_url_params,
                    filter_result_by_fields, update_url_params)
 
 from ..common.platform import PlatformService
+from ..common.utils import add_interval_startend_dates
 # from ..thrive.schemas import CampaignExtendedInfoStats
 from . import urls
 from .parameter_enums import DateIntervalParams
 from .schemas import (CampaignBaseData, CampaignData, CampaignGETResponse,
                       CampaignStat, CampaignStatDayDetailsGETResponse,
                       MergedWithThriveStats, StatsAllCampaignGETResponse)
-from .utils import (add_interval_startend_dates_by_dateInterval,
-                    add_token_to_uri, fix_date_interval_value,
+from .utils import (add_token_to_uri, fix_date_interval_value,
                     update_client_id_in_uri)
 
-alias_param_dateInterval = alias_param(
-    alias='dateInterval',
-    key='time_interval',
-    callback=lambda value: fix_date_interval_value(value.lower()) if value else value
-)
 
-add_startend_dates_by_dateInterval = add_interval_startend_dates_by_dateInterval(
-    'time_interval', 'dateInterval')
-
-# def fix_dateInterval_param(func):
-#     return add_startend_dates_by_dateInterval(alias_param_dateInterval(func))
+def adjust_dateInterval_params(func):
+    alias_param_dateInterval = alias_param(
+        alias='dateInterval',
+        key='time_interval',
+        callback=lambda value: fix_date_interval_value(value.lower()) if value else value
+    )
+    add_startend_dates_by_dateInterval = add_interval_startend_dates('dateInterval')
+    return alias_param_dateInterval(add_startend_dates_by_dateInterval(func))
 
 
 class MGid(PlatformService):
@@ -101,8 +99,7 @@ class MGid(PlatformService):
             result = {field: summary[field] for field in fields}
         return result
 
-    @alias_param_dateInterval
-    @add_startend_dates_by_dateInterval
+    @adjust_dateInterval_params
     def stats_campaign_pure_platform(self,
                                      campaign_id: str = None,
                                      dateInterval: DateIntervalParams = 'today',

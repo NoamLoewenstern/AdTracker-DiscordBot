@@ -30,3 +30,5 @@ DATE_RANGE_FLAG = re.compile(rf' /(?:date|date_range)(?:[: ])'
                              + rf'(?P<date_range>{date}(?:-{date})?)', re.IGNORECASE)
 TIME_RANGE_FLAG = re.compile(rf' /(?:time|time_range|date_interval)(?:[: ])'
                              + f'{date_interval_combined}', re.IGNORECASE)
+
+NON_BASE_DATE_INTERVAL_RE = re.compile('([2-689]|[12][0-9])d', re.IGNORECASE)

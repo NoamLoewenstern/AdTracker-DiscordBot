@@ -1,3 +1,7 @@
+from bot.patterns import NON_BASE_DATE_INTERVAL_RE
+from errors import InvalidCommandFlag
+
+
 def fix_date_interval_value(date_interval: str) -> str:
     r""" @date_interval: \d[dwmy] """
     # allowed:
@@ -11,8 +15,13 @@ def fix_date_interval_value(date_interval: str) -> str:
     #   THIS_YEAR
     #   LAST_YEAR
     #   CUSTOM (using startDate and endDate query args)
-    return {
+    base_intervals = {
         '1d': 'TODAY',
         '7d': 'LAST_7_DAYS',
         '30d': 'LAST_30_DAYS',
-    }.get(date_interval.lower(), date_interval)
+    }
+    if date_interval.lower() in base_intervals:
+        return base_intervals[date_interval.lower()]
+    if (match := NON_BASE_DATE_INTERVAL_RE.match(date_interval)):
+        return 'CUSTOM'
+    raise InvalidCommandFlag(flag='time_range')

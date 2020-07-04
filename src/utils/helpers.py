@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, List, Union
 from pydantic import BaseModel
 
 
+# decorator
 def alias_param(alias: str, key: str,
                 callback: Callable[[str], str] = lambda value: value,
                 replace_exists=False):
