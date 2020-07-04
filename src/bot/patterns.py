@@ -3,7 +3,7 @@ import re
 date = r'\d\d\d\d-\d\d-\d\d'
 date_interval = r'(?: ?(?P<time_interval>\d+[dwmy]))'  # 1d | 3d | 7d
 date_interval_string = r'(?: ?(?P<time_interval>\w+?))'  # today | yesterday
-date_interval_combined = rf'(?: ?(?P<time_interval>(\d{1,3}[dwmy]|[a-z]+)))'
+date_interval_combined = r'(?: ?(?P<time_interval>(\d{1,3}[dwmy]|[a-z]+)))'
 uuid4hex = r'(?:[a-f0-9]{8}(?:-?[a-f0-9]{4}){3}-?[a-f0-9]{12})'
 campaign_id = rf'(?: (?P<campaign_id>(?:\d|{uuid4hex})+(?!\w)))'
 

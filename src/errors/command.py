@@ -14,6 +14,19 @@ class InvalidCommand(BaseCustomException):
         }
 
 
+class InvalidCommandFlag(BaseCustomException):
+    def __init__(self, message='Invalid Command Flags', flag=''):
+        super().__init__(message)
+        self.message = message
+        self.flag = flag
+
+    def dict(self):
+        return {
+            'message':  self.message,
+            'command':  self.command,
+        }
+
+
 class InvalidCampaignId(BaseCustomException):
     def __init__(self, message='Invalid Campaign ID', campaign_id=''):
         super().__init__(message)

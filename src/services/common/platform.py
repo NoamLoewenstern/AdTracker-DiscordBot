@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from utils import DictForcedStringKeys
 
 from ..thrive import Thrive
-from . import CommonService
+from .common_service import CommonService
 from .utils import get_thrive_id_from_camp
 
 

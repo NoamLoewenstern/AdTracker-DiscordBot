@@ -16,7 +16,8 @@ from .parameter_enums import DateIntervalParams
 from .schemas import (CampaignBaseData, CampaignData, CampaignGETResponse,
                       CampaignStat, CampaignStatDayDetailsGETResponse,
                       MergedWithThriveStats, StatsAllCampaignGETResponse)
-from .utils import (add_token_to_uri, fix_date_interval_value,
+from .utils import (add_interval_startend_dates_by_dateInterval,
+                    add_token_to_uri, fix_date_interval_value,
                     update_client_id_in_uri)
 
 alias_param_dateInterval = alias_param(
@@ -24,6 +25,12 @@ alias_param_dateInterval = alias_param(
     key='time_interval',
     callback=lambda value: fix_date_interval_value(value.lower()) if value else value
 )
+
+add_startend_dates_by_dateInterval = add_interval_startend_dates_by_dateInterval(
+    'time_interval', 'dateInterval')
+
+# def fix_dateInterval_param(func):
+#     return add_startend_dates_by_dateInterval(alias_param_dateInterval(func))
 
 
 class MGid(PlatformService):
@@ -95,13 +102,16 @@ class MGid(PlatformService):
         return result
 
     @alias_param_dateInterval
+    @add_startend_dates_by_dateInterval
     def stats_campaign_pure_platform(self,
                                      campaign_id: str = None,
                                      dateInterval: DateIntervalParams = 'today',
                                      as_json=True,
                                      **kwargs) -> List[CampaignStat]:
         url = urls.CAMPAIGNS.STATS_DAILY
-        url = update_url_params(url, {'dateInterval': dateInterval})
+        url = update_url_params(url, {'dateInterval': dateInterval,
+                                      'startDate': kwargs.get('startDate', ''),
+                                      'endDate': kwargs.get('endDate', '')})
         resp = self.get(url).json()
         resp_model = StatsAllCampaignGETResponse(**resp)
         stats = resp_model.campaigns_stat.values()
@@ -113,17 +123,14 @@ class MGid(PlatformService):
             result = [stat.dict() for stat in result]
         return result
 
-    @alias_param_dateInterval
     def stats_campaign(self, *,
                        campaign_id: str = None,
-                       dateInterval: DateIntervalParams = 'today',
                        fields: Optional[List[str]] = ['id', 'name', 'clicks', 'cost', 'conv',
                                                       'cpa', 'roi', 'revenue', 'profit'],  # CampaignStat
                        # revenue <- rev, profit'],  # MergedWithThriveStats
                        **kwargs) -> List['MergedWithThriveStats.dict']:
         kwargs.update({
             'campaign_id': campaign_id,
-            'dateInterval': dateInterval,
             'as_json': False,
         })
         stats = self.stats_campaign_pure_platform(**kwargs)
@@ -135,16 +142,13 @@ class MGid(PlatformService):
         result = filter_result_by_fields(merged_stats, fields)
         return result
 
-    @alias_param_dateInterval
     def spent_campaign(self, *,
                        campaign_id: str = None,
                        min_spent=0.0001,
-                       dateInterval: DateIntervalParams = 'today',
                        fields: List[str] = ['name', 'id', 'spent'],
                        **kwargs) -> list:
         kwargs.update({
             'campaign_id': campaign_id,
-            'dateInterval': dateInterval,
             'fields': fields,
         })
         stats = self.stats_campaign_pure_platform(**kwargs)
@@ -152,7 +156,6 @@ class MGid(PlatformService):
         result = filter_result_by_fields(filtered_by_spent, fields)
         return result
 
-    @alias_param_dateInterval
     def bot_traffic(self, *,
                     campaign_id: str = None,
                     fields: List[str] = ['name', 'id', 'thrive_clicks', 'platform_clicks'],

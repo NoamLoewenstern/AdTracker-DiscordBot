@@ -2,7 +2,7 @@ from typing import Callable, List, Optional, Union
 
 from pydantic import Field
 
-from ..common import TargetType
+from ..common.common_service import TargetType
 from ..common.platform import get_thrive_id_from_camp
 from ..common.schemas import BaseModel
 

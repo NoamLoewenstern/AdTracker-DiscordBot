@@ -6,7 +6,7 @@ from pydantic import Field
 from errors import InvalidPlatormCampaignName
 from services.thrive.schemas import CampaignExtendedInfoStats
 
-from ..common import TargetType
+from ..common.common_service import TargetType
 from ..common.platform import get_thrive_id_from_camp
 from ..common.schemas import BaseModel
 

@@ -22,6 +22,20 @@ async def test_stats_day_details():
 
 
 @pytest.mark.asyncio
+async def test_stats_day_details_3days():
+    data = await handle_content(f'/{PLATFORM} stats {TEST_CAMPAING_ID} 3d')
+    assert log_resp(data, 'stats_day_details_3days.txt')
+    assert len(data) != 0
+
+
+@pytest.mark.asyncio
+async def test_stats_day_details_7days():
+    data = await handle_content(f'/{PLATFORM} stats {TEST_CAMPAING_ID} 7d')
+    assert log_resp(data, 'stats_day_details_7days.txt')
+    assert len(data) != 0
+
+
+@pytest.mark.asyncio
 async def test_stats_day_details_30days():
     data = await handle_content(f'/{PLATFORM} stats {TEST_CAMPAING_ID} 30d')
     assert log_resp(data, 'stats_day_details_30days.txt')
