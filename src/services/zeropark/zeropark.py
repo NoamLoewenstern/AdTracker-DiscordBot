@@ -35,9 +35,9 @@ class ZeroPark(PlatformService):
     @property
     def campaigns(self):
         if self._campaigns is None:
-            campaigns = self.list_campaigns(fields=['id', 'name', 'status', 'statistics'],
-                                            as_json=False)
-            self._campaigns = DictForcedStringKeys({campaign.id: campaign for campaign in campaigns})
+            campaigns = self.list_campaigns(fields=['id', 'name', 'clicks',
+                                                    'spent', 'bid', 'target_type'])
+            self._campaigns = self._update_campaigns(campaigns)
         return self._campaigns
 
     @alias_param_interval
@@ -45,9 +45,9 @@ class ZeroPark(PlatformService):
     def list_campaigns(self,
                        fields: Optional[List[str]] = ['id', 'name'],
                        **kwargs) -> list:
-        result = self.stats_campaign_pure_platform(**kwargs)
-        result = filter_result_by_fields(result, fields)
-        return result
+        stats = self.stats_campaign_pure_platform(**kwargs)
+        stats = filter_result_by_fields(stats, fields)
+        return stats
 
     @alias_param_interval
     @alias_param_campaignNameOrId
@@ -63,12 +63,13 @@ class ZeroPark(PlatformService):
         resp = self.get(url).json()
         resp_model = CampaignStatsResponse(**resp)
         result = extended_stats = ListExtendedStats.parse_obj(
-            [ExtendedStats(**elem.details.dict(), **elem.stats.dict())
+            [ExtendedStats(**elem.stats.dict(), **elem.details.dict())
              for elem in resp_model.elements]).__root__
         if campaignNameOrId is not None:  # returning specific campaign
             result = [stat for stat in extended_stats
                       if campaignNameOrId in (stat['id'], stat['name'])]
-
+        else:
+            self._update_campaigns(result)
         if as_json:
             result = [stat.dict() for stat in result]
         return result
@@ -80,7 +81,6 @@ class ZeroPark(PlatformService):
                        interval: str = "TODAY",
                        fields: Optional[List[str]] = ['id', 'name', 'clicks', 'cost', 'conv',
                                                       'cpa', 'roi', 'revenue', 'profit'],
-                       as_json=True,
                        **kwargs) -> List['MergedWithThriveStats.dict']:
         kwargs.update({
             'campaignNameOrId': campaignNameOrId,
@@ -95,8 +95,6 @@ class ZeroPark(PlatformService):
             time_interval=kwargs.get('time_interval'),
         )
         merged_stats = self._merge_thrive_stats(stats, tracker_result, MergedWithThriveStats)
-        if as_json:
-            merged_stats = [stat.dict() for stat in merged_stats]
         result = filter_result_by_fields(merged_stats, fields)
         return result
 

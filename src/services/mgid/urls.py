@@ -6,3 +6,6 @@ class CAMPAIGNS:
     STATS_DAILY_DETAILED = '/goodhits/campaigns/{campaign_id}/statistics'
     STATS_DAILY = '/goodhits/clients/{client_id}/campaigns-stat'
 
+
+class Token:
+    GET_CURRENT = '/auth/token'

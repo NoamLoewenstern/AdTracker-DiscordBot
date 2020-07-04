@@ -19,7 +19,8 @@ def alias_param(alias: str, key: str,
     return decorator
 
 
-def filter_result_by_fields(result: List[Union[BaseModel, Dict[str, Any]]], fields: List[str]):
+def filter_result_by_fields(result: List[Union[BaseModel, Dict[str, Any]]],
+                            fields: List[str]) -> List[Dict]:
     if not fields:
         return result
     return [{field: obj[field]

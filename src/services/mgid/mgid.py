@@ -3,7 +3,8 @@ import json
 import logging
 from typing import Any, Dict, List, Optional, Union
 
-from errors import InvalidCampaignId, InvalidPlatormCampaignName
+from errors import (InvalidCampaignId, InvalidEmailPassword,
+                    InvalidPlatormCampaignName)
 # from services.thrive import Thrive
 from utils import (DictForcedStringKeys, alias_param, append_url_params,
                    filter_result_by_fields, update_url_params)
@@ -40,9 +41,8 @@ class MGid(PlatformService):
     @property
     def campaigns(self):
         if self._campaigns is None:
-            campaigns = self.list_campaigns(fields=['id', 'name', 'status', 'statistics'],
-                                            as_json=False)
-            self._campaigns = DictForcedStringKeys({campaign['id']: campaign for campaign in campaigns})
+            campaigns = self.list_campaigns(fields=['id', 'name', 'status', 'statistics'])
+            self._campaigns = self._update_campaigns(campaigns)
         return self._campaigns
 
     def _removed_deleted(self, campaigns: List[Union[CampaignBaseData, Dict['id', str]]]):
@@ -58,7 +58,6 @@ class MGid(PlatformService):
                        start: int = None,
                        campaign_id: int = None,
                        fields: List[str] = ['name', 'id'],
-                       as_json=True,
                        **kwargs) -> list:
         url = urls.CAMPAIGNS.LIST_CAMPAIGNS
         if campaign_id is not None:
@@ -68,14 +67,14 @@ class MGid(PlatformService):
         if fields:
             url = append_url_params(url, {'fields':  json.dumps(fields, separators=(',', ':'))})
         resp = self.get(url).json()
-        if campaign_id is None:
-            resp_model = CampaignGETResponse.parse_obj(resp)
-            campaigns = resp_model.__root__.values()
-        else:
+        if campaign_id is not None:
             resp_model = CampaignData(**resp)
             campaigns = [resp_model]
-        if as_json:
-            campaigns = [camp.dict() for camp in campaigns]
+        else:
+            resp_model = CampaignGETResponse.parse_obj(resp)
+            campaigns = resp_model.__root__.values()
+            campaigns = [camp for camp in campaigns]
+            self._update_campaigns(campaigns)
         result = filter_result_by_fields(campaigns, fields)
         return result
 
@@ -121,7 +120,6 @@ class MGid(PlatformService):
                        fields: Optional[List[str]] = ['id', 'name', 'clicks', 'cost', 'conv',
                                                       'cpa', 'roi', 'revenue', 'profit'],  # CampaignStat
                        # revenue <- rev, profit'],  # MergedWithThriveStats
-                       as_json=True,
                        **kwargs) -> List['MergedWithThriveStats.dict']:
         kwargs.update({
             'campaign_id': campaign_id,
@@ -134,8 +132,6 @@ class MGid(PlatformService):
             time_interval=kwargs.get('time_interval'),
         )
         merged_stats = self._merge_thrive_stats(stats, tracker_result, MergedWithThriveStats)
-        if as_json:
-            merged_stats = [stat.dict() for stat in merged_stats]
         result = filter_result_by_fields(merged_stats, fields)
         return result
 
@@ -174,4 +170,11 @@ class MGid(PlatformService):
                 'thrive_clicks': stat['thrive_clicks'],
                 'platform_clicks': stat['platform_clicks'],
             })
+        return result
+
+    def get_api_token(self, **kwargs) -> List:
+        url = urls.Token.GET_CURRENT
+        if not self.email or not self.password:
+            raise InvalidEmailPassword(platform='MGID', data="Must Require Email And Password!")
+        result = self.post(url, data={'email': self.email, 'password': self.password})
         return result

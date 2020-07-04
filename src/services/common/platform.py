@@ -26,6 +26,12 @@ class PlatformService(CommonService):
     def campaigns(self, d: dict):
         self._campaigns = DictForcedStringKeys(d)
 
+    def _update_campaigns(self, campaigns: List[BaseModel]):
+        if self._campaigns is None:
+            self._campaigns = DictForcedStringKeys()
+        self._campaigns.update({campaign['id']: campaign for campaign in campaigns})
+        return self._campaigns
+
     def get_thrive_id(self, campaign: Union[BaseModel, Dict[Union['id', 'name'], Union[str, int]]],
                       raise_=not os.getenv('DEBUG')) -> Optional[str]:
         return get_thrive_id_from_camp(campaign=campaign,

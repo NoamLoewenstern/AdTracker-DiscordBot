@@ -89,17 +89,20 @@ class CampaignStatsResponse(BaseModel):
     elements: List[CampaignElement] = None
 
 
-class ExtendedStats(Stats):
-    # includes: Stats
-    # includes: Details Data:
-    id: str
-    name: str
-    geo: str
-    type: str
-    totalBudget: Budget
-    dailyBudget: Budget
-    bid: float
-    state: State
+class ExtendedStats(Details):
+    # includes: Details
+    # includes: Stats Data:
+    spent: float
+    payout: float
+    redirects: int
+    conversions: int
+    clicks: int = 0
+    platform_clicks: int = Field(0, alias='clicks')
+    averageBid: float = None
+    availableVisits: int = None
+    returnOfInvestment: float = None
+    winRatio: float = None
+    ecpa: float = None
 
 
 class ListExtendedStats(BaseModel):

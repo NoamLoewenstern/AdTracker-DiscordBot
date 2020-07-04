@@ -4,8 +4,8 @@ date = r'\d\d\d\d-\d\d-\d\d'
 date_interval = r'(?: ?(?P<time_interval>\d+[dwmy]))'  # 1d | 3d | 7d
 date_interval_string = r'(?: ?(?P<time_interval>\w+?))'  # today | yesterday
 date_interval_combined = rf'(?: ?(?P<time_interval>(\d{1,3}[dwmy]|[a-z]+)))'
-campaign_id = rf'(?: (?P<campaign_id>\d+(?!\w)))'
-
+uuid4hex = r'(?:[a-f0-9]{8}(?:-?[a-f0-9]{4}){3}-?[a-f0-9]{12})'
+campaign_id = rf'(?: (?P<campaign_id>(?:\d|{uuid4hex})+(?!\w)))'
 
 LIST_CAMPAIGNS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>camps|list)'
                             + fr'{campaign_id}?',
@@ -23,8 +23,6 @@ BOT_TRAFFIC = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>bot-traffic)'
                          + fr'{campaign_id}?'
                          + fr'{date_interval_combined}?',
                          re.IGNORECASE)
-
-print(BOT_TRAFFIC.pattern)
 
 OUTPUT_FORMAT = re.compile(r' /output(?:[: ])(?P<output_format>\w+)', re.IGNORECASE)
 FILTER_FIELDS = re.compile(r' /fields(?:[: ])(?P<fields>[a-z]+(?:,[a-z]*)*)', re.IGNORECASE)
