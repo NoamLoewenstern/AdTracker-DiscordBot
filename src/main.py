@@ -14,6 +14,7 @@ from errors import BaseCustomException
 
 TOKEN = os.environ['DISCORD_TOKEN']
 GUILD = os.environ['DISCORD_GUILD']
+GUILD_DEV = os.environ['DISCORD_GUILD_DEV']
 MESSAGE_HANDLER = MessageHandler()
 client = discord.Client()
 MAX_NUMBER_LINES = 2000
@@ -22,12 +23,15 @@ MAX_NUMBER_LINES = 2000
 @client.event
 async def on_ready():
     guild = discord.utils.get(client.guilds, name=GUILD)
+    guild_dev = discord.utils.get(client.guilds, name=GUILD_DEV)
 
     print(
-        f'{client.user} is connected to the following guild:\n'
+        f'{client.user} is connected to the following guilds:\n'
         f'{guild.name}(id: {guild.id})\n'
+        f'{guild_dev.name}(id: {guild_dev.id})\n'
     )
-    logging.info(f'Connected BOT to {guild.name}')
+    logging.info(f'BOT Connected to {guild.name}')
+    logging.info(f'BOT Connected to {guild_dev.name}')
 
 
 async def handle_content(content):
@@ -54,13 +58,13 @@ async def handle_content(content):
 
 @client.event
 async def on_message(message):
-    if message.guild.name != GUILD:
+    if message.guild.name not in [GUILD, GUILD_DEV]:
         return
     if message.author == client.user:  # ignore bot messages
         return
     _id = str(uuid.uuid4())[:4]  # new message id
     logging.debug(f'{_id} | FROM: {message.author} | MSG: {message.content}')
-    resp = await handle_content(message)
+    resp = await handle_content(message.content)
     logging.debug(f'{_id} | RESP: {resp}')
     if isinstance(resp, (list, dict)):
         resp_msg = dumps(resp, indent=2)
@@ -80,8 +84,8 @@ async def on_message(message):
             # )
             # os.remove(temp_file.name)
         return
-
     await message.channel.send(resp_msg)
+
 
 if __name__ == '__main__':
     client.run(TOKEN)

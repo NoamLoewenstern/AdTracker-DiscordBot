@@ -41,6 +41,14 @@ async def test_stats_campaigns():
 
 
 @pytest.mark.asyncio
+async def test_stats_campaigns_3d():
+    TEST_CAMPAING_ID = 10013
+    data = await handle_content(f'/{PLATFORM} stats {TEST_CAMPAING_ID} /time_range:3d')
+    log_resp(data, 'stats_campaigns_3d.txt')
+    assert len(data) > 0
+
+
+@pytest.mark.asyncio
 async def test_stats_campaigns_all():
     data = await handle_content(f'/{PLATFORM} stats')
     log_resp(data, 'stats_campaigns_all.txt')

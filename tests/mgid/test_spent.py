@@ -40,7 +40,7 @@ async def test_spent_all_campaigns_7d():
 
 @pytest.mark.asyncio
 async def test_spent_all_campaigns_30d():
-    data = await handle_content(f'/{PLATFORM} spent /fields:id,name,spent /time_range:30d')
+    data = await handle_content(f'/{PLATFORM} spent 30d')
     data = data if data else 'no results for spent over 0'
     assert log_resp(data, 'spent_all_campaigns_30d.txt')
     assert len(data) > 0
