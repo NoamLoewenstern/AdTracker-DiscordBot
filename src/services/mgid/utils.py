@@ -2,7 +2,7 @@
 from typing import Dict, Optional, Union
 from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
 
-from bot.patterns import NON_BASE_DATE_INTERVAL_RE
+from bot.patterns import DATE_DAYS_INTERVAL_RE, NON_BASE_DATE_INTERVAL_RE
 from errors import InvalidCommandFlag
 
 
@@ -52,6 +52,6 @@ def fix_date_interval_value(date_interval: str) -> str:
     }
     if date_interval.lower() in base_intervals:
         return base_intervals[date_interval.lower()]
-    if (match := NON_BASE_DATE_INTERVAL_RE.match(date_interval)):
+    if (match := DATE_DAYS_INTERVAL_RE.match(date_interval)):
         return 'interval'
     raise InvalidCommandFlag(flag='time_range')

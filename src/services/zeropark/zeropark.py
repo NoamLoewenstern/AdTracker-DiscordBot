@@ -57,6 +57,7 @@ class ZeroPark(PlatformService):
         return stats
 
     @adjust_interval_params
+    @alias_param_campaignNameOrId
     def stats_campaign_pure_platform(self,
                                      campaignNameOrId: str = None,
                                      interval: str = "TODAY",

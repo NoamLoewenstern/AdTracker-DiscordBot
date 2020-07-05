@@ -5,15 +5,30 @@ from utils import (alias_param, append_url_params, filter_result_by_fields,
                    update_url_params)
 
 from ..common import CommonService
+from ..common.utils import add_interval_startend_dates
 from . import urls
 from .schemas import (
     CampaignGeneralInfo, CampaignGETResponse, CampaignNameID, CampaignStats,
     Source, SourceGETResponse)
+from .utils import fix_date_interval_value
 
 source_mapper = {
     3: 'MGID',
     7: 'ZeroPark',
 }
+
+
+def adjust_interval_params(func):
+    alias_param_interval = alias_param(
+        alias='interval',
+        key='time_interval',
+        callback=lambda value: fix_date_interval_value(value.lower()) if value else value
+    )
+    add_startend_dates_by_interval = add_interval_startend_dates(
+        'interval',
+        custom_date_key='interval',
+        strftime=r'%m/%d/%Y')
+    return alias_param_interval(add_startend_dates_by_interval(func))
 
 
 class Thrive(CommonService):
@@ -79,23 +94,21 @@ class Thrive(CommonService):
         result = filter_result_by_fields(resp_model.data, fields)
         return result
 
-    @alias_param(alias='time_range', key='time_interval')
-    #  callback=lambda value: fix_date_interval_value(value.lower()))
+    @adjust_interval_params
     def stats_campaigns(self, *,
                         campaign_id: Optional[str] = None,
-                        time_range: str = 'Today',
+                        time_interval: str = '1d',
                         fields: List[str] = ['name', 'id', 'clicks', 'thrive_clicks',
                                              'cost', 'conv', 'ctr', 'roi', 'rev', 'profit', 'cpa'],
-                        as_json=True,
                         **kwargs) -> List['CampaignExtendedInfoStats.dict']:
         url = urls.CAMPAIGNS.CAMPAIGN_STATS
         if campaign_id:
             url = update_url_params(url, {'camps': campaign_id})
+        url = append_url_params(url, {'range[from]': kwargs['startDate'],
+                                      'range[to]': kwargs['endDate']})
         # TODO implement the 'time_range' for request.
         # it has some problems.
         resp = self.get(url).json()
-        result = resp_model = CampaignStats(**resp)
-        if as_json:
-            result = [stat.dict() for stat in resp_model.data]
-        result = filter_result_by_fields(result, fields)
+        resp_model = CampaignStats(**resp)
+        result = filter_result_by_fields(resp_model.data, fields)
         return result
