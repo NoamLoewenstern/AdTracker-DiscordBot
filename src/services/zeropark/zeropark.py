@@ -135,14 +135,16 @@ class ZeroPark(PlatformService):
 
     @adjust_interval_params
     @alias_param_campaignNameOrId
-    def top_widgets(self,
-                    campaignNameOrId: str,
-                    interval: str = "TODAY",
-                    widget_name: str = None,
-                    filter_limit: int = 5,
-                    fields: List[str] = [
-                        'id', 'target', 'spent', 'conversions', 'redirects'],
-                    **kwargs) -> list:
+    def stats_widgets(self, *,
+                      campaignNameOrId: str,
+                      interval: str = "TODAY",
+                      widget_name: str = None,
+                      filter_limit: int = '',
+                      fields: List[str] = ['id', 'target',
+                                           'spent', 'conversions',
+                                           'redirects', 'ecpa'],
+                      sortColumn='CONVERSIONS',
+                      **kwargs) -> List[TargetStatsMergedData]:
         """
         Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
         """
@@ -151,20 +153,44 @@ class ZeroPark(PlatformService):
                                       'interval': interval,
                                       'startDate': kwargs.get('startDate', ''),
                                       'endDate': kwargs.get('endDate', ''),
-                                      'sortColumn': 'CONVERSIONS',
+                                      'sortColumn': sortColumn,
                                       'limit': filter_limit,
                                       })
         if widget_name is not None:
             url = update_url_params(url, {'targetAddresses': widget_name})
 
         resp = self.get(url).json()
-        resp_model = TargetStatsByCampaignResponse(**resp)
+        resp_model = TargetStatsByCampaignResponse.parse_obj(resp)
         merged_widget_data = [TargetStatsMergedData(**widget_data.dict(include={'id', 'target',
                                                                                 'source', 'sourceId',
                                                                                 'trafficSourceType'}),
                                                     **widget_data.stats.dict())
                               for widget_data in resp_model.elements]
         merged_widget_data.sort(key=lambda widget: widget.conversions, reverse=True)
-        filtered_sites = merged_widget_data[:filter_limit]
+        filtered_sites = merged_widget_data[:int(filter_limit)] if filter_limit else merged_widget_data
         result = filter_result_by_fields(filtered_sites, fields)
+        return result
+
+    def top_widgets(self, **kwargs) -> List[TargetStatsMergedData]:
+        """
+        Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
+        """
+        return self.stats_widgets(**kwargs)
+
+    def high_cpa_widgets(self,
+                         threshold: str,
+                         fields: List[str] = ['id', 'target',
+                                              'spent', 'conversions',
+                                              'redirects', 'ecpa'],
+                         **kwargs) -> List[TargetStatsMergedData]:
+        """
+        Get list of all the widgets (Where Converting > 1) of a given {campaignNameOrId}
+        which had CPA of less than {threshhold}
+        """
+        del kwargs['filter_limit']
+        widgets_stats = self.stats_widgets(sortColumn='SPENT', **kwargs)
+        filtered_by_conversions = [stat for stat in widgets_stats if stat['conversions'] > 0]
+        filtered_by_cpa = [stat for stat in filtered_by_conversions
+                           if stat['ecpa'] > float(threshold)]
+        result = filter_result_by_fields(filtered_by_cpa, fields)
         return result
