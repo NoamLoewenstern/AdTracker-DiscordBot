@@ -9,7 +9,8 @@ from ..common.platform import PlatformService
 from ..common.utils import add_interval_startend_dates
 from . import urls
 from .schemas import (CampaignStatsResponse, ExtendedStats, ListExtendedStats,
-                      MergedWithThriveStats)
+                      MergedWithThriveStats, TargetStatsByCampaignResponse,
+                      TargetStatsMergedData)
 from .utils import fix_date_interval_value
 
 
@@ -130,4 +131,40 @@ class ZeroPark(PlatformService):
                 'thrive_clicks': stat['thrive_clicks'],
                 'platform_clicks': stat['platform_clicks'],
             })
+        return result
+
+    @adjust_interval_params
+    @alias_param_campaignNameOrId
+    def top_widgets(self,
+                    campaignNameOrId: str,
+                    interval: str = "TODAY",
+                    widget_name: str = None,
+                    filter_limit: int = 5,
+                    fields: List[str] = [
+                        'id', 'target', 'spent', 'conversions', 'redirects'],
+                    **kwargs) -> list:
+        """
+        Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
+        """
+        url = urls.CAMPAIGNS.LIST_WIDGETS.format(campaign_id=campaignNameOrId)
+        url = update_url_params(url, {'campaignId': campaignNameOrId,
+                                      'interval': interval,
+                                      'startDate': kwargs.get('startDate', ''),
+                                      'endDate': kwargs.get('endDate', ''),
+                                      'sortColumn': 'CONVERSIONS',
+                                      'limit': filter_limit,
+                                      })
+        if widget_name is not None:
+            url = update_url_params(url, {'targetAddresses': widget_name})
+
+        resp = self.get(url).json()
+        resp_model = TargetStatsByCampaignResponse(**resp)
+        merged_widget_data = [TargetStatsMergedData(**widget_data.dict(include={'id', 'target',
+                                                                                'source', 'sourceId',
+                                                                                'trafficSourceType'}),
+                                                    **widget_data.stats.dict())
+                              for widget_data in resp_model.elements]
+        merged_widget_data.sort(key=lambda widget: widget.conversions, reverse=True)
+        filtered_sites = merged_widget_data[:filter_limit]
+        result = filter_result_by_fields(filtered_sites, fields)
         return result
