@@ -58,7 +58,7 @@ class Details(CampaignBaseData):
 
 class Stats(BaseModel):
     spent: float
-    payout: float
+    payout: int
     redirects: int
     conversions: int
     clicks: int = 0
@@ -143,3 +143,45 @@ class MergedWithThriveStats(ExtendedStats):
             'cpa': self.cpa,
             'revenue': self.revenue,
         }
+
+
+class TargetStats(BaseModel):
+    spent: float
+    payout: int
+    averageBid: float
+    redirects: int
+    conversions: int
+    returnOfInvestment: float = None
+    ecpa: float = None
+
+
+class BidPosition(BaseModel):
+    topBid: float = None
+    position: str = None
+
+
+class TargetData(BaseModel):
+    id: str
+    target: str
+    source: str
+    sourceId: str
+    trafficSourceType: str
+    stats: TargetStats
+    state: State
+    bidPosition: BidPosition
+
+
+class TargetStatsMergedData(TargetStats):
+    id: str
+    target: str
+    source: str
+    sourceId: str
+    trafficSourceType: str
+
+
+class TargetStatsByCampaignResponse(BaseModel):
+    page: int = None
+    total: int = None
+    limit: int = None
+    summary: Summary = None
+    elements: List[TargetData] = None

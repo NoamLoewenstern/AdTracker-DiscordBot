@@ -66,6 +66,9 @@ async def on_message(message):
     logging.debug(f'{_id} | FROM: {message.author} | MSG: {message.content}')
     resp = await handle_content(message.content)
     logging.debug(f'{_id} | RESP: {resp}')
+    if resp.strip() == '':
+        return await message.channel.send('Empty Results for Given Command'
+                                          ' (Try Widening the Time-Interval for RequestedData)')
     if isinstance(resp, (list, dict)):
         resp_msg = dumps(resp, indent=2)
     else:
