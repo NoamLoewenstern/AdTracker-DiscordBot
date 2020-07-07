@@ -214,3 +214,14 @@ class MGid(PlatformService):
         filtered_widgets = widget_stats[:filter_limit]
         result = filter_result_by_fields(filtered_widgets, fields)
         return result
+
+    @adjust_dateInterval_params
+    def high_cpa_widgets(self, *,
+                        campaign_id: str,
+                        widget_id: str = None,
+                        dateInterval: DateIntervalParams = 'today',
+                        filter_limit: int = 5,
+                        fields: List[str] = ['id', 'clicks', 'spent', 'buy', 'buyCost'],
+                        **kwargs,
+                        ) -> List[WidgetStats]:
+        pass
