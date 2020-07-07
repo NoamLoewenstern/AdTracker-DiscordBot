@@ -3,7 +3,8 @@ from typing import Any, Dict, List, Optional, Union
 
 # from extensions import Thrive
 from utils import (DictForcedStringKeys, alias_param, append_url_params,
-                   filter_result_by_fields, update_url_params)
+                   filter_result_by_fields, operator_factory,
+                   update_url_params)
 
 from ..common.platform import PlatformService
 from ..common.utils import add_interval_startend_dates
@@ -135,15 +136,13 @@ class ZeroPark(PlatformService):
 
     @adjust_interval_params
     @alias_param_campaignNameOrId
-    def stats_widgets(self, *,
+    def widgets_stats(self, *,
                       campaignNameOrId: str,
                       interval: str = "TODAY",
                       widget_name: str = None,
                       filter_limit: int = '',
-                      fields: List[str] = ['id', 'target',
-                                           'spent', 'conversions',
-                                           'redirects', 'ecpa'],
-                      sortColumn='CONVERSIONS',
+                      sort_key: str = 'CONVERSIONS',
+                      fields: List[str] = ['id', 'target', 'spent', 'conversions', 'ecpa'],
                       **kwargs) -> List[TargetStatsMergedData]:
         """
         Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
@@ -153,7 +152,7 @@ class ZeroPark(PlatformService):
                                       'interval': interval,
                                       'startDate': kwargs.get('startDate', ''),
                                       'endDate': kwargs.get('endDate', ''),
-                                      'sortColumn': sortColumn,
+                                      'sortColumn': sort_key,
                                       'limit': filter_limit,
                                       })
         if widget_name is not None:
@@ -171,26 +170,34 @@ class ZeroPark(PlatformService):
         result = filter_result_by_fields(filtered_sites, fields)
         return result
 
-    def top_widgets(self, **kwargs) -> List[TargetStatsMergedData]:
+    def widgets_top(self, **kwargs) -> List[TargetStatsMergedData]:
         """
         Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
         """
-        return self.stats_widgets(**kwargs)
+        return self.widgets_stats(**kwargs)
 
-    def high_cpa_widgets(self,
-                         threshold: str,
-                         fields: List[str] = ['id', 'target',
-                                              'spent', 'conversions',
-                                              'redirects', 'ecpa'],
-                         **kwargs) -> List[TargetStatsMergedData]:
+    def widgets_filter_cpa(self, *,
+                           threshold: str,
+                           operator: Union['eq', 'ne', 'lt', 'gt', 'le', 'ge'] = 'le',
+                           fields: List[str] = ['id', 'target', 'spent', 'conversions', 'ecpa'],
+                           **kwargs,
+                           ) -> List[TargetStatsMergedData]:
         """
-        Get list of all the widgets (Where Converting > 1) of a given {campaignNameOrId}
+        Get list of all the widgets (Where Conversions > 1) of a given {campaignNameOrId}
         which had CPA of less than {threshhold}
         """
-        del kwargs['filter_limit']
-        widgets_stats = self.stats_widgets(sortColumn='SPENT', **kwargs)
+        if 'filter_limit' in kwargs:
+            del kwargs['filter_limit']
+        widgets_stats = self.widgets_stats(sort_key='SPENT', **kwargs)
         filtered_by_conversions = [stat for stat in widgets_stats if stat['conversions'] > 0]
         filtered_by_cpa = [stat for stat in filtered_by_conversions
-                           if stat['ecpa'] > float(threshold)]
+                           # the operator is used here:
+                           if getattr(stat['ecpa'], operator_factory[operator])(float(threshold))]
         result = filter_result_by_fields(filtered_by_cpa, fields)
         return result
+
+    def widgets_high_cpa(self, **kwargs) -> List[TargetStatsMergedData]:
+        return self.widgets_filter_cpa(operator='ge', **kwargs)
+
+    def widgets_low_cpa(self, **kwargs) -> List[TargetStatsMergedData]:
+        return self.widgets_filter_cpa(operator='le', **kwargs)

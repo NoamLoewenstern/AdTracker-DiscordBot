@@ -28,3 +28,13 @@ def filter_result_by_fields(result: List[Union[BaseModel, Dict[str, Any]]],
              for field in fields
              if field in obj}
             for obj in result]
+
+
+operator_factory = {
+    'eq': '__eq__',
+    'ne': '__ne__',
+    'lt': '__lt__',
+    'gt': '__gt__',
+    'le': '__le__',
+    'ge': '__ge__',
+}

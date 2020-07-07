@@ -1,6 +1,6 @@
 from typing import Callable, List, Optional, Union
 
-from pydantic import Field
+from pydantic import Field, validator
 
 from ..common.common_service import TargetType
 from ..common.platform import get_thrive_id_from_camp
@@ -69,6 +69,11 @@ class Stats(BaseModel):
     winRatio: float = None
     ecpa: float = None
 
+    @validator('ecpa')
+    def prevent_none(cls, v):
+        if v is None:
+            return 0
+
 
 class CampaignElement(BaseModel):
     details: Details
@@ -103,6 +108,11 @@ class ExtendedStats(Details):
     returnOfInvestment: float = None
     winRatio: float = None
     ecpa: float = None
+
+    @validator('ecpa')
+    def prevent_none(cls, v):
+        if v is None:
+            return 0
 
 
 class ListExtendedStats(BaseModel):
@@ -153,6 +163,11 @@ class TargetStats(BaseModel):
     conversions: int
     returnOfInvestment: float = None
     ecpa: float = None
+
+    @validator('ecpa')
+    def prevent_none(cls, v):
+        if v is None:
+            return 0
 
 
 class BidPosition(BaseModel):
