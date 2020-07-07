@@ -3,8 +3,28 @@ import json
 
 def convert_dict_to_raw_string(resp: list):
     raw_resp = []
-    for key, value in resp.items():
+    special_keys = {
+        'id': {
+            'value': '',
+            'priority': 0,
+        },
+        'name': {
+            'value': '',
+            'priority': 1,
+        },
+    }
+    for key, value in sorted(resp.items()):
+        if key in special_keys:
+            special_keys[key]['value'] = value
+            continue
         raw_resp.append(f'{key}: {value}')
+    add_special_keys = [spec_key for spec_key in special_keys
+                        if special_keys[spec_key]['value']]
+    add_special_keys.sort(key=lambda key: special_keys[key]['priority'],
+                          reverse=True)
+    for key in add_special_keys:
+        value = special_keys[key]['value']
+        raw_resp.insert(0, f'{key}: {value}')
     return '\n'.join(raw_resp).strip()
 
 
