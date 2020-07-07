@@ -7,7 +7,7 @@ date_interval_combined = r'(?: ?(?P<time_interval>\d{1,4}[dwmy]|[a-z]+))'
 uuid4hex = r'(?:[a-f0-9]{8}(?:-?[a-f0-9]{4}){3}-?[a-f0-9]{12})'
 campaign_id = rf'(?: (?P<campaign_id>(?:\d|{uuid4hex})+(?!\w)))'
 filter_limit = r'(?: (?P<filter_limit>\d+(?!\w)))'
-threshold = r'(?: (?P<threshold>\d+(?!\w)))'
+threshold = r'(?: (?P<threshold>\d+(?:\.\d+)?(?!\w)))'
 
 LIST_CAMPAIGNS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>camps|list)'
                             + f'{campaign_id}?',
@@ -25,16 +25,21 @@ BOT_TRAFFIC = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>bot-traffic)'
                          + f'{campaign_id}?'
                          + f'{date_interval_combined}?',
                          re.IGNORECASE)
-TOP_WIDGETS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>top-widgets)'
+WIDGETS_TOP = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>widgets-top)'
                          + f'{campaign_id}'
                          + f'{filter_limit}?'
                          + f'{date_interval_combined}?',
                          re.IGNORECASE)
-HIGH_CPA_WIDGETS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>high-cpa-widgets)'
+WIDGETS_HIGH_CPA = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>widgets-high-cpa)'
                               + f'{campaign_id}'
                               + f'{threshold}'
                               + f'{date_interval_combined}?',
                               re.IGNORECASE)
+WIDGETS_LOW_CPA = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>widgets-low-cpa)'
+                             + f'{campaign_id}'
+                             + f'{threshold}'
+                             + f'{date_interval_combined}?',
+                             re.IGNORECASE)
 
 OUTPUT_FORMAT = re.compile(r' /output[: ](?P<output_format>\w+)', re.IGNORECASE)
 FILTER_FIELDS = re.compile(r' /fields[: ](?P<fields>[a-z]+(?:,[a-z]*)*)', re.IGNORECASE)

@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Dict, List, Optional, Union
 
-from pydantic import Field
+from pydantic import Field, validator
 
 from errors import InvalidPlatormCampaignName
 from services.thrive.schemas import CampaignExtendedInfoStats
@@ -138,11 +138,22 @@ class CampaignStat(CampaignBaseData):
     interestCost: float = None
     decision: float = None
     decisionCost: float = None
-    buying: float
-    buyingCost: float
+    buying: int = None
+    conversions: int = Field(None, alias='buying')
+    buyingCost: float = None
+    cpa: float = Field(None, alias='buyingCost')
     revenue: float
     epc: float
     profit: float
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in ['buy',
+                      'conversions',
+                      'cpa',
+                      'buyCost']:
+            if getattr(self, field) is None:
+                setattr(self, field, 0)
 
 
 class StatsAllCampaignGETResponse(BaseModel):
@@ -166,13 +177,12 @@ class MergedWithThriveStats(CampaignStat):
     cvr: float = None
     # epc: float # platfrom contradiction
     # epa: float # platfrom contradiction
-    # cpa: int # property
 
-    @property
-    def cpa(self) -> float:
-        if self.conv == 0:
-            return 0
-        return self.cost / self.conv
+    # @property # calculating from thrive
+    # def cpa(self) -> float:
+    #     if self.conv == 0:
+    #         return 0
+    #     return self.cost / self.conv
 
     @property
     def revenue(self) -> float:
@@ -181,7 +191,7 @@ class MergedWithThriveStats(CampaignStat):
     def dict(self, *args, **kwargs):
         return {
             **super().dict(*args, **kwargs),
-            'cpa': self.cpa,
+            # 'cpa': self.cpa,
             'revenue': self.revenue,
         }
 
@@ -191,13 +201,23 @@ class WidgetSourceStats(BaseModel):
     spent: float
     cpc: str
     qualityFactor: int
-    buy: int = 0
-    conversions: int = Field(0, alias='buy')
+    buy: int = None
+    conversions: int = Field(None, alias='buy')
     buyCost: float = None
+    cpa: float = Field(None, alias='buyCost')
     decision: int = None
     decisionCost: float = None
     interest: int = None
     interestCost: float = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in ['buy',
+                      'conversions',
+                      'cpa',
+                      'buyCost']:
+            if getattr(self, field) is None:
+                setattr(self, field, 0)
 
 
 class WidgetStats(WidgetSourceStats):
