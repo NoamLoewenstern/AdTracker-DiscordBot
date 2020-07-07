@@ -37,11 +37,12 @@ class CommonService:
         resp = getattr(self.session, method)(self.base_url + uri, *args, **kwargs)
         if 'application/json' not in resp.headers['Content-Type']:
             logging.error('[!] unexpected resp: is not json')
-        if not resp.ok:
+        if not resp.ok or 'errors' in resp.json():
             raise APIError(platform='',
                            data={**resp.json(),
                                  'url': self.base_url + uri,
                                  'reason': resp.reason,
+                                 'errors': resp.json().get('errors'),
                                  'status_code': resp.status_code},
                            explain=resp.reason)
         return resp
