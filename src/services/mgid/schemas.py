@@ -184,3 +184,26 @@ class MergedWithThriveStats(CampaignStat):
             'cpa': self.cpa,
             'revenue': self.revenue,
         }
+
+
+class WidgetSourceStats(BaseModel):
+    clicks: int
+    spent: float
+    cpc: str
+    qualityFactor: int
+    buy: int = 0
+    conversions: int = Field(0, alias='buy')
+    buyCost: float = None
+    decision: int = None
+    decisionCost: float = None
+    interest: int = None
+    interestCost: float = None
+
+
+class WidgetStats(WidgetSourceStats):
+    id: str = None  # doesn't exist in the response - added to identify widget with id.
+    sources: Dict[str, WidgetSourceStats] = None
+
+
+class CampaignStatsBySiteGETResponse(BaseModel):
+    __root__: Dict[str, Dict[str, Dict[str, WidgetStats]]]
