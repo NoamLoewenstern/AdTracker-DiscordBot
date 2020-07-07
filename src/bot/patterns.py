@@ -6,7 +6,7 @@ date_interval_string = r'(?: ?(?P<time_interval>\w+?))'  # today | yesterday
 date_interval_combined = r'(?: ?(?P<time_interval>\d{1,3}[dwmy]|[a-z]+))'
 uuid4hex = r'(?:[a-f0-9]{8}(?:-?[a-f0-9]{4}){3}-?[a-f0-9]{12})'
 campaign_id = rf'(?: (?P<campaign_id>(?:\d|{uuid4hex})+(?!\w)))'
-filter_num = r'(?: (?P<filter_num>\d+(?!\w)))'
+filter_limit = r'(?: (?P<filter_limit>\d+(?!\w)))'
 
 LIST_CAMPAIGNS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>camps|list)'
                             + fr'{campaign_id}?',
@@ -26,7 +26,7 @@ BOT_TRAFFIC = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>bot-traffic)'
                          re.IGNORECASE)
 TOP_WIDGETS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>top-widgets)'
                          + fr'{campaign_id}'
-                         + fr'{filter_num}?'
+                         + fr'{filter_limit}?'
                          + fr'{date_interval_combined}?',
                          re.IGNORECASE)
 

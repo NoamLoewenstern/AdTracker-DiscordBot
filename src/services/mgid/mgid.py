@@ -186,12 +186,12 @@ class MGid(PlatformService):
                     campaign_id: str,
                     widget_id: str = None,
                     dateInterval: DateIntervalParams = 'today',
-                    filter_num: int = 5,
+                    filter_limit: int = 5,
                     fields: List[str] = ['id', 'clicks', 'spent', 'buy', 'buyCost'],
                     **kwargs,
                     ) -> List[WidgetStats]:
         """
-        Get top widgets (sites) {filter_num} conversions (buy) by {campaign_id}
+        Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
         """
         url = urls.CAMPAIGNS.WIDGETS_STATS.format(campaign_id=campaign_id)
         if widget_id:
@@ -211,6 +211,6 @@ class MGid(PlatformService):
                                                  **cur_widget_stats.dict(exclude={'id'}))
                     widget_stats.append(widget_with_id)
         widget_stats.sort(key=lambda widget: widget.buy, reverse=True)
-        filtered_sites = widget_stats[:filter_num]
-        result = filter_result_by_fields(filtered_sites, fields)
+        filtered_widgets = widget_stats[:filter_limit]
+        result = filter_result_by_fields(filtered_widgets, fields)
         return result
