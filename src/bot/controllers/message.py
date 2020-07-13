@@ -19,12 +19,6 @@ DEFAULT_OUTPUT_FORMAT = 'list'
 class MessageHandler:
     def __init__(self):
 
-        self.pattern_actions = [
-            (patterns.LIST_CAMPAIGNS, lambda platform:
-                self.command_handler.list_campaigns_factory(platform)),
-            (patterns.CAMPAIGN_STATS, lambda platform:
-                self.command_handler.campaign_stats_factory(platform)),
-        ]
         self.output_format_types = {
             'default': lambda: 'list',
             'json': lambda resp: format_response(resp),

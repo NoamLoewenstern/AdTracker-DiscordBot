@@ -3,11 +3,12 @@ import json
 import logging
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from errors import (InvalidCampaignId, InvalidEmailPassword,
+from config import MAX_URL_PARAMS_SIZE
+from errors import (APIError, InvalidCampaignId, InvalidEmailPassword,
                     InvalidPlatormCampaignName)
 # from services.thrive import Thrive
 from utils import (DictForcedStringKeys, alias_param, append_url_params,
-                   filter_result_by_fields, operator_factory,
+                   chunks, filter_result_by_fields, operator_factory,
                    update_url_params)
 
 from ..common.platform import PlatformService
@@ -20,8 +21,8 @@ from .schemas import (CampaignBaseData, CampaignData, CampaignGETResponse,
                       CampaignStatsBySiteGETResponse, MergedWithThriveStats,
                       StatsAllCampaignGETResponse, WidgetSourceStats,
                       WidgetStats)
-from .utils import (add_token_to_uri, fix_date_interval_value,
-                    update_client_id_in_uri)
+from .utils import (add_token_to_url, fix_date_interval_value,
+                    update_client_id_in_url)
 
 
 def adjust_dateInterval_params(func):
@@ -35,14 +36,12 @@ def adjust_dateInterval_params(func):
 
 
 class MGid(PlatformService):
-    # TODO check different types of statuses - to filter out the deleted ones
-
     def __init__(self, client_id: str, token: str, thrive, *args, **kwargs):
         super().__init__(thrive=thrive,
                          base_url=urls.CAMPAIGNS.BASE_URL,
-                         uri_hooks=[
-                             lambda uri: add_token_to_uri(uri, token),
-                             lambda uri: update_client_id_in_uri(uri, client_id)
+                         url_hooks=[
+                             lambda url: add_token_to_url(url, token),
+                             lambda url: update_client_id_in_url(url, client_id)
                          ],
                          *args, **kwargs)
 
@@ -125,8 +124,8 @@ class MGid(PlatformService):
 
     def stats_campaign(self, *,
                        campaign_id: str = None,
-                       fields: Optional[List[str]] = ['id', 'name', 'clicks', 'cost', 'conv',
-                                                      'cpa', 'roi', 'revenue', 'profit'],  # CampaignStat
+                       fields: Optional[List[str]] = ['id', 'name', 'platform_clicks', 'cost', 'conv',
+                                                      'cpa', 'roi', 'revenue', 'profit', 'target_type'],  # CampaignStat
                        # revenue <- rev, profit'],  # MergedWithThriveStats
                        **kwargs) -> List['MergedWithThriveStats.dict']:
         kwargs.update({
@@ -156,10 +155,10 @@ class MGid(PlatformService):
         result = filter_result_by_fields(filtered_by_spent, fields)
         return result
 
-    def bot_traffic(self, *,
-                    campaign_id: str = None,
-                    fields: List[str] = ['name', 'id', 'thrive_clicks', 'platform_clicks'],
-                    **kwargs) -> list:
+    def campaign_bot_traffic(self, *,
+                             campaign_id: str = None,
+                             fields: List[str] = ['name', 'id', 'thrive_clicks', 'platform_clicks'],
+                             **kwargs) -> list:
         stats = self.stats_campaign(campaign_id=campaign_id, fields=fields, **kwargs)
         result = []
         for stat in stats:
@@ -223,7 +222,7 @@ class MGid(PlatformService):
         return self.widgets_stats(**kwargs)
 
     def widgets_filter_cpa(self, *,
-                           threshold: str,
+                           threshold: float,
                            operator: Union['eq', 'ne', 'lt', 'gt', 'le', 'ge'] = 'le',
                            fields: List[str] = ['id', 'spent', 'conversions', 'cpa'],
                            **kwargs,
@@ -248,3 +247,72 @@ class MGid(PlatformService):
 
     def widgets_low_cpa(self, **kwargs) -> List[WidgetStats]:
         return self.widgets_filter_cpa(operator='le', **kwargs)
+
+    def _validate_widget_filter_resp(self, resp):
+        if not resp.is_json or 'id' not in resp.json_content:
+            raise APIError(platform='MGID',
+                           data={**resp.json(),
+                                    'url': resp.url,
+                                    'reason': resp.reason,
+                                    'errors': (resp.json().get('errors', '')
+                                               if resp.is_json else resp.content),
+                                    'status_code': resp.status_code},
+                           explain=resp.reason)
+
+    def _widgets_init_filter_to_blacklist(self, campaign_id: str) -> None:
+        """ if is already blacklist ('except') - method does nothing """
+        # CLEANING CURRENT FILTER ON WIDGETS IF IS NOT BLACKLIST
+        camps_stats = self.list_campaigns(campaign_id=campaign_id, fields=['widgetsFilterUid'])
+        cur_filterType = camps_stats[0]['widgetsFilterUid']['filterType'].lower()
+        if cur_filterType == 'only':
+            self.widgets_turn_on_all(campaign_id=campaign_id)
+
+    def widgets_turn_on_all(self, campaign_id: str, **kwargs) -> dict:
+        url_turn_off_filter = urls.WIDGETS.RESUME.format(campaign_id=campaign_id)
+        url_turn_off_filter = update_url_params(url_turn_off_filter,
+                                                {'widgetsFilterUid': 'include,off,1'})
+        resp = self.patch(url_turn_off_filter)
+        self._validate_widget_filter_resp(resp)
+        return {
+            'Success': True,
+            'Action': 'Turned On All Widgets',
+            'Data': f'Campaign: {campaign_id}',
+        }
+
+    @adjust_dateInterval_params
+    def widgets_kill_longtail(self, *,
+                              campaign_id: str,
+                              threshold: int,
+                              dateInterval: DateIntervalParams = 'today',
+                              **kwargs) -> dict:
+        kwargs.update({
+            'filter_limit': '',
+            'campaign_id': campaign_id,
+            'sort_key': 'spent',
+            'fields': ['id', 'spent', 'state'],
+        })
+        widgets_stats = self.widgets_stats(**kwargs)
+        filtered_widgets: List[str] = [widget['id'] for widget in widgets_stats
+                                       if widget['spent'] < float(threshold)]
+        # CLEANING CURRENT FILTER ON WIDGETS IF IS NOT BLACKLIST
+        # if is already blacklist ('except') - method does nothing
+        self._widgets_init_filter_to_blacklist(campaign_id=campaign_id)
+
+        url = urls.WIDGETS.PAUSE.format(campaign_id=campaign_id)
+        for chunk_widgets in chunks(filtered_widgets, MAX_URL_PARAMS_SIZE):
+            url = update_url_params(url, {'widgetsFilterUid': "include,except,{ids}"
+                                          .format(ids=','.join(chunk_widgets))})
+            resp = self.patch(url)
+            self._validate_widget_filter_resp(resp)
+
+        return {
+            'Success': True,
+            'Action': f'Paused {len(filtered_widgets)} Widgets',
+            'Data': f'Campaign: {campaign_id}',
+        }
+
+    def widget_kill_bot_traffic(self, *,
+                                campaignNameOrId: str,
+                                threshold: float,
+                                **kwargs,) -> list:
+        pass
