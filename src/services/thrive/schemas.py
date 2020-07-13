@@ -86,7 +86,7 @@ class CampaignGeneralInfo(CampaignBasicInfo):
     customToken: str
     cloakingOpt: int
     cloakingOptions: CloakingOptions
-    uri: str
+    # uri: str = None
     campIdHashQuery: str
     testClick: int
     testConv: int

@@ -42,7 +42,7 @@ class PlatformService(CommonService):
                             stats: List[Dict],
                             thrive_results: List[Dict],
                             MergedStatsModel: BaseModel,
-                            ) -> List[Dict]:
+                            ) -> List[BaseModel]:
         merged = []
         for stat in stats:
             for thrive_result in thrive_results:
