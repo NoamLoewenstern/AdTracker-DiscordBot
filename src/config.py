@@ -3,7 +3,7 @@ import os
 
 logging.basicConfig(
     # filename=getenv("SERVICE_LOG", "server.log"),
-    level=logging.DEBUG if os.getenv('DEBUG') else logging.info,
+    level=logging.DEBUG if os.getenv('DEBUG') or os.getenv('DEV') else logging.INFO,
     format="%(levelname)s: %(asctime)s" \
     # + r"pid:%(process)s module:%(module)s %(message)s",
     + "| %(module)s.py | %(message)s",
