@@ -185,3 +185,4 @@ tests/**/responses/*.json
 tests/**/responses/*.txt
 keys.txt
 tests/**/http/*.json
+scrips.sh
