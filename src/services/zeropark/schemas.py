@@ -122,6 +122,7 @@ class ListExtendedStats(BaseModel):
 class MergedWithThriveStats(ExtendedStats):
     # thrive stat data:
     thrive_clicks: int = None
+    platform_clicks: int = None
     cost: float
     conv: int
     ctr: float
@@ -192,6 +193,7 @@ class TargetStatsMergedData(TargetStats):
     source: str
     sourceId: str
     trafficSourceType: str
+    state: State = None
 
 
 class TargetStatsByCampaignResponse(BaseModel):

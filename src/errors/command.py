@@ -3,7 +3,7 @@ from .base import BaseCustomException
 
 class InvalidCommand(BaseCustomException):
     def __init__(self, message='Invalid Command', command=''):
-        super().__init__(message)
+        super().__init__(f'{message}: "{command}"')
         self.message = message
         self.command = command
 
@@ -16,7 +16,7 @@ class InvalidCommand(BaseCustomException):
 
 class InvalidCommandFlag(BaseCustomException):
     def __init__(self, message='Invalid Command Flags', flag=''):
-        super().__init__(message)
+        super().__init__(f'{message}: {flag}')
         self.message = message
         self.flag = flag
 
@@ -29,7 +29,7 @@ class InvalidCommandFlag(BaseCustomException):
 
 class InvalidCampaignId(BaseCustomException):
     def __init__(self, message='Invalid Campaign ID', campaign_id=''):
-        super().__init__(message)
+        super().__init__(f'{message}: {campaign_id}')
         self.message = message
         self.campaign_id = campaign_id
 

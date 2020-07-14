@@ -125,9 +125,10 @@ class CampaignStatDayDetailsGETResponse(BaseModel):
     id = int
     statistics: CampaignStatDayDetailsStatistics
 
+    id: int = Field(alias='campaignId')
+
 
 class CampaignStat(CampaignBaseData):
-    id: int = Field(alias='campaignId')
     campaignId: int
     imps: int
     clicks: int
@@ -147,13 +148,13 @@ class CampaignStat(CampaignBaseData):
     profit: float
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field in ['buy',
+        for field in ['buying',
                       'conversions',
-                      'cpa',
-                      'buyCost']:
-            if getattr(self, field) is None:
-                setattr(self, field, 0)
+                      'buyingCost',
+                      'cpa']:
+            if kwargs.get(field, None) is None:
+                kwargs[field] = 0
+        super().__init__(*args, **kwargs)
 
 
 class StatsAllCampaignGETResponse(BaseModel):
@@ -198,6 +199,7 @@ class MergedWithThriveStats(CampaignStat):
 
 class WidgetSourceStats(BaseModel):
     clicks: int
+    platform_clicks: int = Field(alias='clicks')
     spent: float
     cpc: str
     qualityFactor: int
@@ -211,13 +213,13 @@ class WidgetSourceStats(BaseModel):
     interestCost: float = None
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         for field in ['buy',
                       'conversions',
                       'cpa',
                       'buyCost']:
-            if getattr(self, field) is None:
-                setattr(self, field, 0)
+            if kwargs.get(field, None) is None:
+                kwargs[field] = 0
+        super().__init__(*args, **kwargs)
 
 
 class WidgetStats(WidgetSourceStats):

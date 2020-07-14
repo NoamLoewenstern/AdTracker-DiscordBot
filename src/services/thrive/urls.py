@@ -6,3 +6,6 @@ class CAMPAIGNS:
     LIST_SOURCES = '/sources/get'
     CAMPAIGN_INFO = '/campaigns/getGeneral'
     CAMPAIGN_STATS = '/campaigns/getWithMetrics'
+
+class WIDGETS:
+    LIST = '/otherVariables/getMetrics'
