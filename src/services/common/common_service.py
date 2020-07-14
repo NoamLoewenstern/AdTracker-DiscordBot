@@ -35,14 +35,16 @@ class CommonService:
             uri = uri_hook(uri)
         logging.info(f'[REQ] [{method.upper()}] {self.base_url + uri}')
         resp = getattr(self.session, method)(self.base_url + uri, *args, **kwargs)
-        if 'application/json' not in resp.headers['Content-Type']:
+        is_json_resp = 'application/json' in resp.headers['Content-Type']
+        if not is_json_resp:
             logging.error('[!] unexpected resp: is not json')
         if not resp.ok or 'errors' in resp.json():
             raise APIError(platform='',
                            data={**resp.json(),
                                  'url': self.base_url + uri,
                                  'reason': resp.reason,
-                                 'errors': resp.json().get('errors'),
+                                 'errors': (resp.json().get('errors')
+                                            if is_json_resp else resp.content),
                                  'status_code': resp.status_code},
                            explain=resp.reason)
         return resp

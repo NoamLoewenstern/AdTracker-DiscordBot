@@ -19,7 +19,9 @@ class Commands(str, Enum):
     bot_traffic = 'bot-traffic'
     list_sources = 'sources'
     spent_campaign = 'spent'
-    top_widgets = 'top-widgets'
+    widgets_top = 'widgets-top'
+    widgets_high_cpa = 'widgets-high-cpa'
+    widgets_low_cpa = 'widgets-low-cpa'
 
 
 COMMANDS_PATTERNS = [
@@ -28,7 +30,9 @@ COMMANDS_PATTERNS = [
     re_patterns.BOT_TRAFFIC,
     re_patterns.LIST_SORCES,
     re_patterns.SPENT_CAMPAIGN,
-    re_patterns.TOP_WIDGETS,
+    re_patterns.WIDGETS_TOP,
+    re_patterns.WIDGETS_HIGH_CPA,
+    re_patterns.WIDGETS_LOW_CPA,
 ]
 
 class CommandParser:
@@ -43,14 +47,18 @@ class CommandParser:
                 Commands.stats_campaign: mgid.stats_campaign,
                 Commands.spent_campaign: mgid.spent_campaign,
                 Commands.bot_traffic: mgid.bot_traffic,
-                Commands.top_widgets: mgid.top_widgets,
+                Commands.widgets_top: mgid.widgets_top,
+                Commands.widgets_high_cpa: mgid.widgets_high_cpa,
+                Commands.widgets_low_cpa: mgid.widgets_low_cpa,
             },
             Platforms.ZEROPARK: {
                 Commands.list_campaigns: zeropark.list_campaigns,
                 Commands.stats_campaign: zeropark.stats_campaign,
                 Commands.spent_campaign: zeropark.spent_campaign,
                 Commands.bot_traffic: zeropark.bot_traffic,
-                Commands.top_widgets: zeropark.top_widgets,
+                Commands.widgets_top: zeropark.widgets_top,
+                Commands.widgets_high_cpa: zeropark.widgets_high_cpa,
+                Commands.widgets_low_cpa: zeropark.widgets_low_cpa,
             },
             Platforms.THRIVE: {
                 Commands.list_campaigns: thrive.list_campaigns,
@@ -70,13 +78,16 @@ class CommandParser:
         else:
             raise InvalidCommand(command=message)
 
-        command_args['command'] = match.group('cmd')
-        command_args['platform'] = match.group('platform')
+        group_dict = match.groupdict()
+        command_args['command'] = group_dict['cmd']
+        command_args['platform'] = group_dict['platform']
         command_args['output_format'] = cls.get_output_format_from_command(message)
         # if (extra_query_args := cls.get_extra_query_args_from_command(message)):
         #     command_args['extra_query_args'] = extra_query_args
         if (fields := cls.get_fields_from_command(message)):
             command_args['fields'] = fields
+        if 'threshold' in group_dict:
+            command_args['threshold'] = group_dict['threshold']
 
         # logging.debug(f"msg: {message} | matched: {match.re.pattern} | "
         #               f"platform: {command_args['platform']}")
@@ -85,6 +96,7 @@ class CommandParser:
         for group_name, default_value in [
             ('campaign_id', None),
             ('time_interval', DEFAULT_TIME_INTERVAL),
+            ('filter_limit', '5'),
         ]:
             if (group_value := match.groupdict().get(group_name) or default_value):
                 command_args[group_name] = group_value
@@ -93,6 +105,7 @@ class CommandParser:
         for pattern in [
             re_patterns.DATE_RANGE_FLAG,
             re_patterns.TIME_RANGE_FLAG,
+            re_patterns.FLAG_LIMIT,
         ]:
             if (match := pattern.search(message)):
                 arg_name, value = list(match.groupdict().items())[0]
@@ -115,8 +128,7 @@ class CommandParser:
 
     @classmethod
     def get_fields_from_command(cls, command) -> Optional[List[str]]:
-        match = re_patterns.FILTER_FIELDS.search(command)
-        if not match:
+        if not (match := re_patterns.FILTER_FIELDS.search(command)):
             return None
         match_fields = match.group('fields')
         fields = match_fields.strip(',').split(',')

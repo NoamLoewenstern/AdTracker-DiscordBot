@@ -1,13 +1,14 @@
 import json
 # import os
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from errors import (InvalidCampaignId, InvalidEmailPassword,
                     InvalidPlatormCampaignName)
 # from services.thrive import Thrive
 from utils import (DictForcedStringKeys, alias_param, append_url_params,
-                   filter_result_by_fields, update_url_params)
+                   filter_result_by_fields, operator_factory,
+                   update_url_params)
 
 from ..common.platform import PlatformService
 from ..common.utils import add_interval_startend_dates
@@ -182,14 +183,15 @@ class MGid(PlatformService):
         return result
 
     @adjust_dateInterval_params
-    def top_widgets(self, *,
-                    campaign_id: str,
-                    widget_id: str = None,
-                    dateInterval: DateIntervalParams = 'today',
-                    filter_limit: int = 5,
-                    fields: List[str] = ['id', 'clicks', 'spent', 'buy', 'buyCost'],
-                    **kwargs,
-                    ) -> List[WidgetStats]:
+    def widgets_stats(self, *,
+                      campaign_id: str,
+                      widget_id: str = None,
+                      dateInterval: DateIntervalParams = 'today',
+                      filter_limit: int = '',
+                      sort_key: str = 'conversions',
+                      fields: List[str] = ['id', 'spent', 'conversions', 'cpa'],
+                      **kwargs,
+                      ) -> List[WidgetStats]:
         """
         Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
         """
@@ -203,14 +205,46 @@ class MGid(PlatformService):
         resp_model = CampaignStatsBySiteGETResponse.parse_obj(resp)
 
         widget_stats = []
-        logging.info(f'campaign_id: {campaign_id}')
         for camp_widget_stats in resp_model.__root__.values():
             for stats in camp_widget_stats.values():
                 for site_id, cur_widget_stats in stats.items():
                     widget_with_id = WidgetStats(id=site_id,
                                                  **cur_widget_stats.dict(exclude={'id'}))
                     widget_stats.append(widget_with_id)
-        widget_stats.sort(key=lambda widget: widget.buy, reverse=True)
-        filtered_widgets = widget_stats[:filter_limit]
+        widget_stats.sort(key=lambda widget: widget[sort_key], reverse=True)
+        filtered_widgets = widget_stats[:int(filter_limit)] if filter_limit else widget_stats
         result = filter_result_by_fields(filtered_widgets, fields)
         return result
+
+    def widgets_top(self, **kwargs) -> List[WidgetStats]:
+        """
+        Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
+        """
+        return self.widgets_stats(**kwargs)
+
+    def widgets_filter_cpa(self, *,
+                           threshold: str,
+                           operator: Union['eq', 'ne', 'lt', 'gt', 'le', 'ge'] = 'le',
+                           fields: List[str] = ['id', 'spent', 'conversions', 'cpa'],
+                           **kwargs,
+                           ) -> List[WidgetStats]:
+        """
+        Get list of all the widgets (Where Conversions > 1) of a given {campaignNameOrId}
+        which had CPA of less than {threshhold}
+        """
+
+        if 'filter_limit' in kwargs:
+            del kwargs['filter_limit']
+        widgets_stats = self.widgets_stats(sort_key='cpa', **kwargs)
+        filtered_by_conversions = [stat for stat in widgets_stats if stat['conversions'] > 0]
+        filtered_by_cpa = [stat for stat in filtered_by_conversions
+                           # the operator is used here:
+                           if getattr(stat['cpa'], operator_factory[operator])(float(threshold))]
+        result = filter_result_by_fields(filtered_by_cpa, fields)
+        return result
+
+    def widgets_high_cpa(self, **kwargs) -> List[WidgetStats]:
+        return self.widgets_filter_cpa(operator='ge', **kwargs)
+
+    def widgets_low_cpa(self, **kwargs) -> List[WidgetStats]:
+        return self.widgets_filter_cpa(operator='le', **kwargs)
