@@ -68,10 +68,9 @@ async def handle_content(content):
 async def on_message(message):
     if message.guild.name not in [GUILD, GUILD_DEV]:
         return
-    if os.getenv('DEV') and message.guild.name == GUILD:
-        return
-    elif message.guild.name == GUILD_DEV:
-        return
+    if message.guild.name == GUILD:
+        if os.getenv('DEV'):
+            return
     if message.author == client.user:  # ignore bot messages
         return
     _id = str(uuid.uuid4())[:4]  # new message id
@@ -95,4 +94,6 @@ async def on_message(message):
 
 
 if __name__ == '__main__':
+    client.run(TOKEN)
+else:
     client.run(TOKEN)
