@@ -110,8 +110,8 @@ class MGid(PlatformService):
                                      **kwargs) -> List[CampaignStat]:
         url = urls.CAMPAIGNS.STATS_DAILY
         url = update_url_params(url, {'dateInterval': dateInterval,
-                                      'startDate': kwargs.get('startDate', ''),
-                                      'endDate': kwargs.get('endDate', '')})
+                                      'startDate': kwargs.get('startDate') or '',
+                                      'endDate': kwargs.get('endDate') or ''})
         resp = self.get(url).json()
         resp_model = StatsAllCampaignGETResponse(**resp)
         stats = resp_model.campaigns_stat.values()
