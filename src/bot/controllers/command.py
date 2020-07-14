@@ -9,7 +9,7 @@ from constants import Platforms
 from errors import InvalidCommand
 from extensions import mgid, thrive, zeropark
 
-from .. import patterns
+from .. import patterns as re_patterns
 from .utils import convert_resp_to_raw_string
 
 
@@ -19,14 +19,16 @@ class Commands(str, Enum):
     bot_traffic = 'bot-traffic'
     list_sources = 'sources'
     spent_campaign = 'spent'
+    top_widgets = 'top-widgets'
 
 
 COMMANDS_PATTERNS = [
-    patterns.LIST_CAMPAIGNS,
-    patterns.CAMPAIGN_STATS,
-    patterns.BOT_TRAFFIC,
-    patterns.LIST_SORCES,
-    patterns.SPENT_CAMPAIGN,
+    re_patterns.LIST_CAMPAIGNS,
+    re_patterns.CAMPAIGN_STATS,
+    re_patterns.BOT_TRAFFIC,
+    re_patterns.LIST_SORCES,
+    re_patterns.SPENT_CAMPAIGN,
+    re_patterns.TOP_WIDGETS,
 ]
 
 class CommandParser:
@@ -41,12 +43,14 @@ class CommandParser:
                 Commands.stats_campaign: mgid.stats_campaign,
                 Commands.spent_campaign: mgid.spent_campaign,
                 Commands.bot_traffic: mgid.bot_traffic,
+                Commands.top_widgets: mgid.top_widgets,
             },
             Platforms.ZEROPARK: {
                 Commands.list_campaigns: zeropark.list_campaigns,
                 Commands.stats_campaign: zeropark.stats_campaign,
                 Commands.spent_campaign: zeropark.spent_campaign,
                 Commands.bot_traffic: zeropark.bot_traffic,
+                Commands.top_widgets: zeropark.top_widgets,
             },
             Platforms.THRIVE: {
                 Commands.list_campaigns: thrive.list_campaigns,
@@ -74,8 +78,8 @@ class CommandParser:
         if (fields := cls.get_fields_from_command(message)):
             command_args['fields'] = fields
 
-        logging.debug(
-            f"msg: {message} | matched: {match.re.pattern} | platform: {command_args['platform']}")
+        # logging.debug(f"msg: {message} | matched: {match.re.pattern} | "
+        #               f"platform: {command_args['platform']}")
 
         # params with default value
         for group_name, default_value in [
@@ -87,22 +91,22 @@ class CommandParser:
 
         # optional flags:
         for pattern in [
-            patterns.DATE_RANGE_FLAG,
-            patterns.TIME_RANGE_FLAG,
+            re_patterns.DATE_RANGE_FLAG,
+            re_patterns.TIME_RANGE_FLAG,
         ]:
             if (match := pattern.search(message)):
                 arg_name, value = list(match.groupdict().items())[0]
                 command_args[arg_name] = value
 
-        # if match.re is patterns.LIST_CAMPAIGNS:
+        # if match.re is re_patterns.LIST_CAMPAIGNS:
         #     pass
-        # if match.re is patterns.CAMPAIGN_STATS:
+        # if match.re is re_patterns.CAMPAIGN_STATS:
         #     command_args['campaign_id'] = match.group('campaign_id')
         #     command_args['time_interval'] = match.group('time_interval') or DEFAULT_TIME_INTERVAL
-        # if match.re is patterns.BOT_TRAFFIC:
+        # if match.re is re_patterns.BOT_TRAFFIC:
         #     command_args['campaign_id'] = match.group('campaign_id')
         #     command_args['time_interval'] = match.group('time_interval') or DEFAULT_TIME_INTERVAL
-        # if match.re is patterns.SPENT_CAMPAIGN:
+        # if match.re is re_patterns.SPENT_CAMPAIGN:
         #     command_args['campaign_id'] = match.group('campaign_id')
         #     command_args['time_interval'] = match.group('time_interval') or DEFAULT_TIME_INTERVAL
 
@@ -111,7 +115,7 @@ class CommandParser:
 
     @classmethod
     def get_fields_from_command(cls, command) -> Optional[List[str]]:
-        match = patterns.FILTER_FIELDS.search(command)
+        match = re_patterns.FILTER_FIELDS.search(command)
         if not match:
             return None
         match_fields = match.group('fields')
@@ -120,7 +124,7 @@ class CommandParser:
 
     @classmethod
     def get_output_format_from_command(cls, command):
-        match = patterns.OUTPUT_FORMAT.search(command)
+        match = re_patterns.OUTPUT_FORMAT.search(command)
         if not match:
             return DEFAULT_OUTPUT_FORMAT
         output_format = match.group('output_format')

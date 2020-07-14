@@ -16,7 +16,9 @@ from . import urls
 from .parameter_enums import DateIntervalParams
 from .schemas import (CampaignBaseData, CampaignData, CampaignGETResponse,
                       CampaignStat, CampaignStatDayDetailsGETResponse,
-                      MergedWithThriveStats, StatsAllCampaignGETResponse)
+                      CampaignStatsBySiteGETResponse, MergedWithThriveStats,
+                      StatsAllCampaignGETResponse, WidgetSourceStats,
+                      WidgetStats)
 from .utils import (add_token_to_uri, fix_date_interval_value,
                     update_client_id_in_uri)
 
@@ -64,9 +66,9 @@ class MGid(PlatformService):
                        campaign_id: int = None,
                        fields: List[str] = ['name', 'id'],
                        **kwargs) -> list:
-        url = urls.CAMPAIGNS.LIST_CAMPAIGNS
+        url = urls.CAMPAIGNS.LIST
         if campaign_id is not None:
-            url = urls.CAMPAIGNS.LIST_CAMPAIGNS + '/' + str(campaign_id)
+            url = urls.CAMPAIGNS.LIST + '/' + str(campaign_id)
         if limit and start is not None:
             url = update_url_params(url, {'limit': limit, 'start': start})
         if fields:
@@ -177,4 +179,38 @@ class MGid(PlatformService):
         if not self.email or not self.password:
             raise InvalidEmailPassword(platform='MGID', data="Must Require Email And Password!")
         result = self.post(url, data={'email': self.email, 'password': self.password})
+        return result
+
+    @adjust_dateInterval_params
+    def top_widgets(self, *,
+                    campaign_id: str,
+                    widget_id: str = None,
+                    dateInterval: DateIntervalParams = 'today',
+                    filter_limit: int = 5,
+                    fields: List[str] = ['id', 'clicks', 'spent', 'buy', 'buyCost'],
+                    **kwargs,
+                    ) -> List[WidgetStats]:
+        """
+        Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
+        """
+        url = urls.CAMPAIGNS.WIDGETS_STATS.format(campaign_id=campaign_id)
+        if widget_id:
+            url += f'/{widget_id}'
+        url = update_url_params(url, {'dateInterval': dateInterval,
+                                      'startDate': kwargs.get('startDate', ''),
+                                      'endDate': kwargs.get('endDate', '')})
+        resp = self.get(url).json()
+        resp_model = CampaignStatsBySiteGETResponse.parse_obj(resp)
+
+        widget_stats = []
+        logging.info(f'campaign_id: {campaign_id}')
+        for camp_widget_stats in resp_model.__root__.values():
+            for stats in camp_widget_stats.values():
+                for site_id, cur_widget_stats in stats.items():
+                    widget_with_id = WidgetStats(id=site_id,
+                                                 **cur_widget_stats.dict(exclude={'id'}))
+                    widget_stats.append(widget_with_id)
+        widget_stats.sort(key=lambda widget: widget.buy, reverse=True)
+        filtered_widgets = widget_stats[:filter_limit]
+        result = filter_result_by_fields(filtered_widgets, fields)
         return result

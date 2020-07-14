@@ -3,9 +3,10 @@ import re
 date = r'\d\d\d\d-\d\d-\d\d'
 date_interval = r'(?: ?(?P<time_interval>\d+[dwmy]))'  # 1d | 3d | 7d
 date_interval_string = r'(?: ?(?P<time_interval>\w+?))'  # today | yesterday
-date_interval_combined = r'(?: ?(?P<time_interval>(\d{1,3}[dwmy]|[a-z]+)))'
+date_interval_combined = r'(?: ?(?P<time_interval>\d{1,3}[dwmy]|[a-z]+))'
 uuid4hex = r'(?:[a-f0-9]{8}(?:-?[a-f0-9]{4}){3}-?[a-f0-9]{12})'
 campaign_id = rf'(?: (?P<campaign_id>(?:\d|{uuid4hex})+(?!\w)))'
+filter_limit = r'(?: (?P<filter_limit>\d+(?!\w)))'
 
 LIST_CAMPAIGNS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>camps|list)'
                             + fr'{campaign_id}?',
@@ -21,6 +22,11 @@ SPENT_CAMPAIGN = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>spent)'
                             re.IGNORECASE)
 BOT_TRAFFIC = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>bot-traffic)'
                          + fr'{campaign_id}?'
+                         + fr'{date_interval_combined}?',
+                         re.IGNORECASE)
+TOP_WIDGETS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>top-widgets)'
+                         + fr'{campaign_id}'
+                         + fr'{filter_limit}?'
                          + fr'{date_interval_combined}?',
                          re.IGNORECASE)
 
