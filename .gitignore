@@ -8,7 +8,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
 # C extensions
 *.so
 
@@ -180,3 +179,9 @@ $RECYCLE.BIN/
 # Custom rules (everything added below won't be overriden by 'Generate .gitignore File' if you use 'Update' option)
 
 .vscode/
+docs/
+*.http
+tests/**/responses/*.json
+tests/**/responses/*.txt
+keys.txt
+tests/**/http/*.json

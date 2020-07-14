@@ -1,0 +1,1 @@
+from .mgid import MGid
