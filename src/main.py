@@ -2,6 +2,7 @@ import logging
 import os
 import traceback
 import uuid
+from datetime import datetime
 from json import dump, dumps
 from tempfile import NamedTemporaryFile
 from textwrap import wrap
@@ -25,13 +26,18 @@ async def on_ready():
     guild = discord.utils.get(client.guilds, name=GUILD)
     guild_dev = discord.utils.get(client.guilds, name=GUILD_DEV)
 
-    print(
+    logging.info(
         f'{client.user} is connected to the following guilds:\n'
         f'{guild.name}(id: {guild.id})\n'
         f'{guild_dev.name}(id: {guild_dev.id})\n'
     )
-    logging.info(f'BOT Connected to {guild.name}')
-    logging.info(f'BOT Connected to {guild_dev.name}')
+    now_format = datetime.now().strftime(r'%d.%m.%y, %H:%M:%S')
+    if os.getenv('DEV'):
+        logging.info(f'BOT Connected to {guild_dev.name}')
+        await guild_dev.channel.send(f'[BOT-DEV] Connected. ({now_format})')
+    else:
+        logging.info(f'BOT Connected to {guild.name}')
+        # await guild.channel.send(f'[BOT] Connected. ({now_format})')
 
 
 async def handle_content(content):
@@ -39,7 +45,7 @@ async def handle_content(content):
     output_format: Union['json', 'list', 'str', 'csv']
     try:
         resp, output_format = MESSAGE_HANDLER.handle_message(content)
-        # for now - not doing anything with output_format, and asuming all responses ar ein str format.
+        # for now - not doing anything with output_format, and asuming all responses are in str format.
     except Exception as err:
         err_resp = {
             "Response": "ERROR",
@@ -60,6 +66,10 @@ async def handle_content(content):
 async def on_message(message):
     if message.guild.name not in [GUILD, GUILD_DEV]:
         return
+    if os.getenv('DEV') and message.guild.name == GUILD:
+        return
+    elif message.guild.name == GUILD_DEV:
+        return
     if message.author == client.user:  # ignore bot messages
         return
     _id = str(uuid.uuid4())[:4]  # new message id
@@ -78,14 +88,6 @@ async def on_message(message):
         for block_resp in wrap(resp_msg, MAX_NUMBER_LINES):
             await message.channel.send(block_resp)
 
-            # with NamedTemporaryFile('w', delete=False, suffix='.json') as temp_file:
-            #     dump(resp, temp_file, indent=2, ensure_ascii=False)
-            #     # temp_file.write(resp_msg.encode())
-            # await message.channel.send(
-            #     f"Response Larger Than {MAX_NUMBER_LINES} Charactors. Response Attached as File.",
-            #     file=discord.File(temp_file.name)
-            # )
-            # os.remove(temp_file.name)
         return
     await message.channel.send(resp_msg)
 
