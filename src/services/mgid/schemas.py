@@ -205,6 +205,7 @@ class WidgetSourceStats(BaseModel):
     conversions: int = Field(None, alias='buy')
     buyCost: float = None
     cpa: float = Field(None, alias='buyCost')
+
     decision: int = None
     decisionCost: float = None
     interest: int = None
@@ -218,6 +219,7 @@ class WidgetSourceStats(BaseModel):
                       'buyCost']:
             if getattr(self, field) is None:
                 setattr(self, field, 0)
+
 
 
 class WidgetStats(WidgetSourceStats):

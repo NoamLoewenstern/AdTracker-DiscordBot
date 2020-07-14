@@ -45,6 +45,7 @@ class CommonService:
                                  'reason': resp.reason,
                                  'errors': (resp.json().get('errors')
                                             if is_json_resp else resp.content),
+
                                  'status_code': resp.status_code},
                            explain=resp.reason)
         return resp

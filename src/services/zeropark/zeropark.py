@@ -144,6 +144,7 @@ class ZeroPark(PlatformService):
                       sort_key: str = 'CONVERSIONS',
                       fields: List[str] = ['id', 'target', 'spent', 'conversions', 'ecpa'],
                       **kwargs) -> List[TargetStatsMergedData]:
+
         """
         Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
         """
@@ -153,6 +154,7 @@ class ZeroPark(PlatformService):
                                       'startDate': kwargs.get('startDate', ''),
                                       'endDate': kwargs.get('endDate', ''),
                                       'sortColumn': sort_key,
+
                                       'limit': filter_limit,
                                       })
         if widget_name is not None:
@@ -160,6 +162,7 @@ class ZeroPark(PlatformService):
 
         resp = self.get(url).json()
         resp_model = TargetStatsByCampaignResponse.parse_obj(resp)
+
         merged_widget_data = [TargetStatsMergedData(**widget_data.dict(include={'id', 'target',
                                                                                 'source', 'sourceId',
                                                                                 'trafficSourceType'}),
@@ -201,3 +204,4 @@ class ZeroPark(PlatformService):
 
     def widgets_low_cpa(self, **kwargs) -> List[TargetStatsMergedData]:
         return self.widgets_filter_cpa(operator='le', **kwargs)
+

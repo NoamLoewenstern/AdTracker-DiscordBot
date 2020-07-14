@@ -24,6 +24,7 @@ class Commands(str, Enum):
     widgets_low_cpa = 'widgets-low-cpa'
 
 
+
 COMMANDS_PATTERNS = [
     re_patterns.LIST_CAMPAIGNS,
     re_patterns.CAMPAIGN_STATS,
@@ -33,6 +34,7 @@ COMMANDS_PATTERNS = [
     re_patterns.WIDGETS_TOP,
     re_patterns.WIDGETS_HIGH_CPA,
     re_patterns.WIDGETS_LOW_CPA,
+
 ]
 
 class CommandParser:
@@ -50,6 +52,7 @@ class CommandParser:
                 Commands.widgets_top: mgid.widgets_top,
                 Commands.widgets_high_cpa: mgid.widgets_high_cpa,
                 Commands.widgets_low_cpa: mgid.widgets_low_cpa,
+
             },
             Platforms.ZEROPARK: {
                 Commands.list_campaigns: zeropark.list_campaigns,
@@ -59,6 +62,7 @@ class CommandParser:
                 Commands.widgets_top: zeropark.widgets_top,
                 Commands.widgets_high_cpa: zeropark.widgets_high_cpa,
                 Commands.widgets_low_cpa: zeropark.widgets_low_cpa,
+
             },
             Platforms.THRIVE: {
                 Commands.list_campaigns: thrive.list_campaigns,
@@ -106,6 +110,7 @@ class CommandParser:
             re_patterns.DATE_RANGE_FLAG,
             re_patterns.TIME_RANGE_FLAG,
             re_patterns.FLAG_LIMIT,
+
         ]:
             if (match := pattern.search(message)):
                 arg_name, value = list(match.groupdict().items())[0]
@@ -129,6 +134,7 @@ class CommandParser:
     @classmethod
     def get_fields_from_command(cls, command) -> Optional[List[str]]:
         if not (match := re_patterns.FILTER_FIELDS.search(command)):
+
             return None
         match_fields = match.group('fields')
         fields = match_fields.strip(',').split(',')

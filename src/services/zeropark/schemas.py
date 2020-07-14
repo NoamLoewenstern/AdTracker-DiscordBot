@@ -170,6 +170,7 @@ class TargetStats(BaseModel):
             return 0
 
 
+
 class BidPosition(BaseModel):
     topBid: float = None
     position: str = None

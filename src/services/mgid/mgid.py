@@ -192,6 +192,7 @@ class MGid(PlatformService):
                       fields: List[str] = ['id', 'spent', 'conversions', 'cpa'],
                       **kwargs,
                       ) -> List[WidgetStats]:
+
         """
         Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
         """
@@ -205,6 +206,7 @@ class MGid(PlatformService):
         resp_model = CampaignStatsBySiteGETResponse.parse_obj(resp)
 
         widget_stats = []
+
         for camp_widget_stats in resp_model.__root__.values():
             for stats in camp_widget_stats.values():
                 for site_id, cur_widget_stats in stats.items():
@@ -248,3 +250,4 @@ class MGid(PlatformService):
 
     def widgets_low_cpa(self, **kwargs) -> List[WidgetStats]:
         return self.widgets_filter_cpa(operator='le', **kwargs)
+

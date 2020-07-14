@@ -9,6 +9,7 @@ campaign_id = rf'(?: (?P<campaign_id>(?:\d|{uuid4hex})+(?!\w)))'
 filter_limit = r'(?: (?P<filter_limit>\d+(?!\w)))'
 threshold = r'(?: (?P<threshold>\d+(?:\.\d+)?(?!\w)))'
 
+
 LIST_CAMPAIGNS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>camps|list)'
                             + f'{campaign_id}?',
                             re.IGNORECASE)
@@ -40,6 +41,7 @@ WIDGETS_LOW_CPA = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>widgets-low-cpa)'
                              + f'{threshold}'
                              + f'{date_interval_combined}?',
                              re.IGNORECASE)
+
 
 OUTPUT_FORMAT = re.compile(r' /output[: ](?P<output_format>\w+)', re.IGNORECASE)
 FILTER_FIELDS = re.compile(r' /fields[: ](?P<fields>[a-z]+(?:,[a-z]*)*)', re.IGNORECASE)
