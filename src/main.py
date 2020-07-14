@@ -25,6 +25,8 @@ MAX_NUMBER_LINES = 2000
 async def on_ready():
     guild = discord.utils.get(client.guilds, name=GUILD)
     guild_dev = discord.utils.get(client.guilds, name=GUILD_DEV)
+    channel_prod = [channel for channel in guild.channels if str(channel.type) == 'text'][0]
+    channel_dev = [channel for channel in guild_dev.channels if str(channel.type) == 'text'][0]
 
     logging.info(
         f'{client.user} is connected to the following guilds:\n'
@@ -34,10 +36,10 @@ async def on_ready():
     now_format = datetime.now().strftime(r'%d.%m.%y, %H:%M:%S')
     if os.getenv('DEV'):
         logging.info(f'BOT Connected to {guild_dev.name}')
-        await guild_dev.channel.send(f'[BOT-DEV] Connected. ({now_format})')
+        await channel_dev.send(f'[BOT-DEV] [{now_format}] Connected!')
     else:
         logging.info(f'BOT Connected to {guild.name}')
-        # await guild.channel.send(f'[BOT] Connected. ({now_format})')
+        # await channel_prod.send(f'[BOT] [{now_format}] Connected!')
 
 
 async def handle_content(content):
