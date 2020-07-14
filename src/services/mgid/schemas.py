@@ -199,6 +199,7 @@ class MergedWithThriveStats(CampaignStat):
 
 class WidgetSourceStats(BaseModel):
     clicks: int
+    platform_clicks: int = Field(alias='clicks')
     spent: float
     cpc: str
     qualityFactor: int

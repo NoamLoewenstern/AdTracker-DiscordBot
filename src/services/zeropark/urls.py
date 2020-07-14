@@ -9,3 +9,4 @@ class CAMPAIGNS:
 class WIDGETS:
     PAUSE = '/campaign/{campaign_id}/targets/pause'
     RESUME = '/campaign/{campaign_id}/targets/resume'
+    LIST = '/stats/campaign/{campaign_id}/targets'

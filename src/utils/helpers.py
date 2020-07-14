@@ -44,3 +44,20 @@ def chunks(lst: list, n: int):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
+
+
+def merged_objs(obj1: Dict[str, Dict], obj2: Dict[str, Dict]) -> List[Dict]:
+    common_keys = set(obj1) & set(obj2)
+
+    combined = {
+        key: obj1[key] + obj2[key]
+        for key in common_keys
+        if isinstance(obj1[key], (int, float))
+    }
+
+    merged_obj = {
+        **obj1,
+        **obj2,
+        **combined,
+    }
+    return merged_obj

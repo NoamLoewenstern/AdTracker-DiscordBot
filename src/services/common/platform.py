@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
-from utils import DictForcedStringKeys
+from utils import DictForcedStringKeys, merged_objs
 
 from ..thrive import Thrive
 from .common_service import CommonService
@@ -49,5 +49,34 @@ class PlatformService(CommonService):
                 if self.get_thrive_id(stat) == str(thrive_result['id']):
                     merged_dict = {**thrive_result, **stat.dict()}
                     merged.append(MergedStatsModel(**merged_dict))
+                    break
                     # logging.debug(f"\tMERGED stats: {stat}")
         return merged
+
+    def _merge_and_update_list_objects(self,
+                                       list_objects_1: Union[Dict, List[Dict]],
+                                       list_objects_2: Union[Dict, List[Dict]],
+                                       key='id',
+                                       just_common=False,
+                                       ) -> List[BaseModel]:
+        if isinstance(list_objects_1, list):
+            dict_1 = {obj[key]: obj for obj in list_objects_1}
+            dict_2 = {obj[key]: obj for obj in list_objects_2}
+        else:
+            dict_1 = list_objects_1
+            dict_2 = list_objects_2
+
+        set_d1_keys = set(dict_1)
+        set_d2_keys = set(dict_2)
+        if set_d1_keys == set_d2_keys:
+            return [merged_objs(dict_1[key], dict_2[key]) for key in set_d1_keys]
+
+        unique_keys_1 = set_d1_keys - set_d2_keys
+        unique_keys_2 = set_d2_keys - set_d1_keys
+        common_keys = set_d2_keys & set_d1_keys
+        merged_list = [merged_objs(dict_1[key], dict_2[key]) for key in common_keys]
+        if just_common:
+            return merged_list
+        merged_list.extend(dict_1[key] for key in unique_keys_1)
+        merged_list.extend(dict_2[key] for key in unique_keys_2)
+        return merged_list

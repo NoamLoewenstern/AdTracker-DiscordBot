@@ -126,7 +126,7 @@ class ZeroPark(PlatformService):
         for stat in stats:
             bot_traffic = 0
             if stat['platform_clicks'] != 0:
-                bot_traffic = stat['thrive_clicks'] / stat['platform_clicks']
+                bot_traffic = stat['thrive_clicks'] / stat['platform_clicks'] * 100
             if bot_traffic != 100:
                 bot_traffic = f'{bot_traffic:02}'
             result.append({
@@ -171,7 +171,7 @@ class ZeroPark(PlatformService):
         assert not filter_limit or str(filter_limit).isnumeric(), "'filter_limit' Must Be Number."
         assert sort_key in (allowed := ['SPENT', 'NAME', 'GEO', 'TYPE', 'BUDGET', 'STATE',
                                         'REDIRECTS', 'CONVERSIONS', 'PAYOUT']), f"'sort_key' allowed values: {allowed}"
-        url = urls.CAMPAIGNS.LIST_WIDGETS.format(campaign_id=campaignNameOrId)
+        url = urls.WIDGETS.LIST.format(campaign_id=campaignNameOrId)
         url = update_url_params(url, {'campaignId': campaignNameOrId,
                                       'interval': interval,
                                       'startDate': kwargs.get('startDate', ''),
@@ -208,7 +208,7 @@ class ZeroPark(PlatformService):
                            ) -> List[TargetStatsMergedData]:
         """
         Get list of all the widgets (Where Conversions > 1) of a given {campaignNameOrId}
-        which had CPA of less than {threshhold}
+        which had CPA of less than {threshold}
         """
         if 'filter_limit' in kwargs:
             del kwargs['filter_limit']
