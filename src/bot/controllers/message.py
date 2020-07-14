@@ -17,27 +17,27 @@ DEFAULT_OUTPUT_FORMAT = 'list'
 
 
 class MessageHandler:
-    def __init__(self):
+    output_format_types = {
+        'default': lambda: 'list',
+        'json': lambda resp: format_response(resp),
+    }
 
-        self.output_format_types = {
-            'default': lambda: 'list',
-            'json': lambda resp: format_response(resp),
-        }
-
-    def handle_message(self, content: str):
+    @classmethod
+    def handle_message(cls, content: str):
 
         command_handler, command_args = CommandParser.parse_command(content)
         resp = command_handler(**command_args)
         # logging.debug(f"reponse: {resp}")
-        resp = self.format_response(resp, format_type=command_args['output_format'])
+        resp = cls.format_response(resp, format_type=command_args['output_format'])
         # logging.debug(f"output-format: {command_args['output_format']}\n{resp}")
         return resp, command_args['output_format']
 
         return "Invalid Command", 'str'
 
-    def get_output_format_type(self, msg: str):
+    @classmethod
+    def get_output_format_type(cls, msg: str):
         if not (match := patterns.OUTPUT_FORMAT.search(msg)):
-            return self.output_format_types['default']()
+            return cls.output_format_types['default']()
 
     @staticmethod
     def format_response(resp: Union[list, dict, str],

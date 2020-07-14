@@ -59,7 +59,8 @@ async def handle_content(content):
         else:
             logging.error(f'[!] ERROR: {err}')
         traceback.print_tb(err.__traceback__)
-        return err_resp
+        result = MESSAGE_HANDLER.format_response(err_resp)
+        return result
 
     return resp
 
@@ -94,6 +95,4 @@ async def on_message(message):
 
 
 if __name__ == '__main__':
-    client.run(TOKEN)
-else:
     client.run(TOKEN)
