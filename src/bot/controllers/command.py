@@ -63,13 +63,13 @@ class CommandParser:
                 Commands.list_campaigns: zeropark.list_campaigns,
                 Commands.stats_campaign: zeropark.stats_campaign,
                 Commands.spent_campaign: zeropark.spent_campaign,
-                Commands.campaign_bot_traffic: zeropark.campaign_bot_traffic,
+                # Commands.campaign_bot_traffic: zeropark.campaign_bot_traffic,
                 Commands.widgets_top: zeropark.widgets_top,
                 Commands.widgets_high_cpa: zeropark.widgets_high_cpa,
                 Commands.widgets_low_cpa: zeropark.widgets_low_cpa,
                 Commands.widgets_kill_longtail: zeropark.widgets_kill_longtail,
                 Commands.widgets_turn_on_all: zeropark.widgets_turn_on_all,
-                Commands.widget_kill_bot_traffic: zeropark.widget_kill_bot_traffic,
+                # Commands.widget_kill_bot_traffic: zeropark.widget_kill_bot_traffic,
             },
             Platforms.THRIVE: {
                 Commands.list_campaigns: thrive.list_campaigns,
@@ -97,8 +97,12 @@ class CommandParser:
         #     command_args['extra_query_args'] = extra_query_args
         if (fields := cls.get_fields_from_command(message)):
             command_args['fields'] = fields
-        if 'threshold' in group_dict:
-            command_args['threshold'] = group_dict['threshold']
+        for optional_arg in [
+            'threshold',
+            'filter_limit',
+        ]:
+            if optional_arg in group_dict:
+                command_args[optional_arg] = group_dict[optional_arg]
 
         # logging.debug(f"msg: {message} | matched: {match.re.pattern} | "
         #               f"platform: {command_args['platform']}")
@@ -107,9 +111,8 @@ class CommandParser:
         for group_name, default_value in [
             ('campaign_id', None),
             ('time_interval', DEFAULT_TIME_INTERVAL),
-            ('filter_limit', '5'),
         ]:
-            if (group_value := match.groupdict().get(group_name) or default_value):
+            if (group_value := group_dict.get(group_name) or default_value):
                 command_args[group_name] = group_value
 
         # optional flags:

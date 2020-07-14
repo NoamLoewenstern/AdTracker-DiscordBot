@@ -60,7 +60,7 @@ def add_interval_startend_dates(converted_date_interval,
                 days_back = int(match.groups()[0])
 
                 today = date.today()
-                from_date = today - timedelta(days=days_back)
+                from_date = today - timedelta(days=days_back - 1)
                 startDate = from_date.strftime(strftime)
                 endDate = today.strftime(strftime)
 

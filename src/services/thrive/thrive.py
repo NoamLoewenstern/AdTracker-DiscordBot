@@ -1,5 +1,6 @@
 # import os
-from typing import Callable, Dict, List, Optional, Union
+import logging
+from typing import Dict, List, Optional, Union
 
 from utils import (alias_param, append_url_params, filter_result_by_fields,
                    update_url_params)
@@ -7,15 +8,11 @@ from utils import (alias_param, append_url_params, filter_result_by_fields,
 from ..common import CommonService
 from ..common.utils import add_interval_startend_dates
 from . import urls
+from .config import WIDGET_KEYS_MAPPER
 from .schemas import (
     CampaignGeneralInfo, CampaignGETResponse, CampaignNameID, CampaignStats,
-    Source, SourceGETResponse)
-from .utils import fix_date_interval_value
-
-source_mapper = {
-    3: 'MGID',
-    7: 'ZeroPark',
-}
+    Source, SourceGETResponse, WidgetStats, WidgetStatsGETResponse)
+from .utils import fix_date_interval_value, subids_to_uids
 
 
 def adjust_interval_params(func):
@@ -97,7 +94,7 @@ class Thrive(CommonService):
     @adjust_interval_params
     def stats_campaigns(self, *,
                         campaign_id: Optional[str] = None,
-                        time_interval: str = '1d',
+                        interval: str = '1d',
                         fields: List[str] = ['name', 'id', 'clicks', 'thrive_clicks',
                                              'cost', 'conv', 'ctr', 'roi', 'rev', 'profit', 'cpa'],
                         **kwargs) -> List['CampaignExtendedInfoStats.dict']:
@@ -111,4 +108,45 @@ class Thrive(CommonService):
         resp = self.get(url).json()
         resp_model = CampaignStats(**resp)
         result = filter_result_by_fields(resp_model.data, fields)
+        return result
+
+    def _remove_unknown_ids(self, list_objects: List[Dict['id', str]], platform='') -> None:
+        unknown_widgets_ids = []
+        for i, widget_stat in enumerate(list_objects):
+            if widget_stat['id'] == 'unknown':
+                unknown_widgets_ids.append(list_objects.pop(i))
+        if unknown_widgets_ids:
+            logging.error(f'[thrive] [widgets_stats] [platform:{platform}] '
+                          f'{len(unknown_widgets_ids)} Unknown Widgets.')
+        return unknown_widgets_ids
+
+    def _convert_subids_to_uids(self, list_objects: List[Dict['id', str]]) -> List[Dict['id', str]]:
+        return subids_to_uids(list_objects)
+
+    @adjust_interval_params
+    def _widgets_stats(self, *,
+                       platform_name: str,
+                       campaign_id: str,
+                       widget_id: str = None,
+                       interval: str = '1d',
+                       sort_key: str = 'conv',
+                       fields: List[str] = ['id', 'clicks', 'cost', 'conv',
+                                            'cpc', 'cpa', 'rev', 'profit'],
+                       **kwargs,
+                       ) -> List[WidgetStats]:
+        assert platform_name.lower() in WIDGET_KEYS_MAPPER, \
+            f"'platform_name' must be of types: {list(WIDGET_KEYS_MAPPER.keys())}"
+        assert sort_key in WidgetStats.__fields__.keys(), \
+            f"'sort_key' must be of types: {list(WidgetStats.__fields__.keys())}"
+        url = urls.WIDGETS.LIST
+        url = append_url_params(url, {'camps': campaign_id,
+                                      'range[from]': kwargs['startDate'] or '',
+                                      'range[to]': kwargs['endDate'] or '',
+                                      'key': WIDGET_KEYS_MAPPER[platform_name.lower()]})
+        resp = self.get(url).json()
+        resp_model = WidgetStatsGETResponse.parse_obj(resp)
+        resp_model.__root__.sort(key=lambda widget: widget[sort_key])
+        # self._remove_unknown_ids(resp_model.__root__)
+
+        result = filter_result_by_fields(resp_model.__root__, fields)
         return result

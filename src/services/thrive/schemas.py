@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from pydantic import Field
 
@@ -137,3 +137,35 @@ class SideCarTimeData(BaseModel):
 class CampaignStats(BaseModel):
     data: List[CampaignExtendedInfoStats]
     sidecar: SideCarTimeData
+
+
+class WidgetStats(BaseModel):
+    value: str
+    id: str = Field(alias='value')
+    clicks: int
+    thrive_clicks: int = Field(alias='clicks')
+    cost: float
+    cpc: float
+    thru: int
+    conv: int
+    rev: float
+    ctr: float
+    profit: float
+    roi: float
+    epc: float
+    cvr: float
+    epa: float
+
+    @property
+    def cpa(self):
+        if self.conv == 0:
+            return 0
+        return self.cost / self.conv
+
+    def dict(self, *args, **kwargs):
+        return {**super().dict(*args, **kwargs),
+                'cpa': self.cpa}
+
+
+class WidgetStatsGETResponse(BaseModel):
+    __root__: List[WidgetStats]

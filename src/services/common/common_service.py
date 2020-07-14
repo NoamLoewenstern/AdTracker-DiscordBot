@@ -33,7 +33,8 @@ class CommonService:
         kwargs.setdefault('timeout', DEFAULT_TIMEOUT_API_REQUEST)
         for url_hook in self.url_hooks:
             url = url_hook(url)
-        logging.info(f'[REQ] [{method.upper()}] {self.base_url + url}')
+        logging.info(f"[REQ] [{method.upper()}] "
+                     f"{self.base_url + url[:200] + '...' if len(url) > 200 else ''} ")
         resp = getattr(self.session, method)(self.base_url + url, *args, **kwargs)
         resp.is_json = 'application/json' in resp.headers['Content-Type']
         resp.json_content = resp.json() if resp.is_json else None
