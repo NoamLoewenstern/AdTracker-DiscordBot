@@ -186,3 +186,4 @@ tests/**/responses/*.txt
 keys.txt
 tests/**/http/*.json
 scrips.sh
+**/**/tempCodeRunnerFile.py
