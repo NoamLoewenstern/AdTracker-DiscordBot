@@ -61,3 +61,14 @@ def merged_objs(obj1: Dict[str, Dict], obj2: Dict[str, Dict]) -> List[Dict]:
         **combined,
     }
     return merged_obj
+
+
+def groupify_list_strings(list_strings: List[str], /, size: int = 70, joiner='\n'):
+    cur_iter_text = ''
+    for block in list_strings:
+        if len(cur_iter_text) + len(block) > size:
+            yield cur_iter_text.strip(joiner)
+            cur_iter_text = ''
+        cur_iter_text += joiner + block
+    if cur_iter_text:
+        yield cur_iter_text

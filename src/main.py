@@ -5,7 +5,6 @@ import uuid
 from datetime import datetime
 from json import dump, dumps
 from tempfile import NamedTemporaryFile
-from textwrap import wrap
 from typing import Union
 
 import discord
@@ -13,6 +12,7 @@ import discord
 from bot.controllers import MessageHandler
 from errors import INTERNAL_ERROR_MSG, BaseCustomException
 from extensions import helper_docs
+from utils import groupify_list_strings
 
 TOKEN = os.environ['DISCORD_TOKEN']
 GUILD = os.environ['DISCORD_GUILD']
@@ -63,7 +63,6 @@ async def handle_content(content):
             logging.error(f'[!] ERROR: {err}')
         traceback.print_tb(err.__traceback__)
         resp = MESSAGE_HANDLER.format_response(INTERNAL_ERROR_MSG)
-
     return resp
 
 
@@ -91,7 +90,7 @@ async def on_message(message):
     resp_msg = dumps(resp, indent=2) if isinstance(resp, (list, dict)) else resp
     if len(resp_msg) > MAX_NUMBER_LINES:
         # sends resp in multiple messages if exceeds tha max chars per message.
-        for block_resp in wrap(resp_msg, MAX_NUMBER_LINES):
+        for block_resp in groupify_list_strings(resp_msg.split('\n\n'), MAX_NUMBER_LINES, joiner='\n\n'):
             await message.channel.send(block_resp)
         return
     await message.channel.send(resp_msg)
