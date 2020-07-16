@@ -143,9 +143,9 @@ class CampaignStat(CampaignBaseData):
     conversions: int = Field(None, alias='buying')
     buyingCost: float = None
     cpa: float = Field(None, alias='buyingCost')
-    revenue: float
-    epc: float
-    profit: float
+    revenue: float = None
+    epc: float = None
+    profit: float = None
 
     def __init__(self, *args, **kwargs):
         for field in ['buying',
