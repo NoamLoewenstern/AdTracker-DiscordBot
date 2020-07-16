@@ -31,6 +31,7 @@ class CommandHelpDocumentation:
         self.parser = ArgumentParser(prog=prog, usage=f"{{/help | {prog}}} <COMMAND> [-h]")
         self.subparser = self.parser.add_subparsers(title='Commands')
         self._add_commands_to_subparser(self.subparser)
+
         self.parser.add_argument(FlagsDoc.filter_fields.name, nargs='?', help=FlagsDoc.filter_fields.value)
         self.parser.add_argument(FlagsDoc.filter_limit.name, nargs='?', help=FlagsDoc.filter_limit.value)
 
