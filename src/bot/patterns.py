@@ -47,8 +47,7 @@ class Commands:
                                        + f'{threshold}',
                                        re.IGNORECASE)
     WIDGETS_TURN_ON_ALL = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>widgets-turn-on-all)'
-                                     + f'{campaign_id}'
-                                     + f'{date_interval_combined}?',
+                                     + f'{campaign_id}',
                                      re.IGNORECASE)
     WIDGETS_KILL_BOT_TRAFFIC = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>widgets-kill-bot|kill-bot)'
                                           + f'{campaign_id}'

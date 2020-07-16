@@ -7,7 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 from config import DEFAULT_OUTPUT_FORMAT, DEFAULT_TIME_INTERVAL
 from constants import Platforms
 from errors import InvalidCommand
-from extensions import mgid, thrive, zeropark
+from services import MGid, Thrive, ZeroPark
 
 from .. import patterns as re_patterns
 from .utils import convert_resp_to_raw_string
@@ -41,46 +41,49 @@ COMMANDS_PATTERNS = [
     re_patterns.Commands.WIDGETS_KILL_BOT_TRAFFIC,
 ]
 
-class CommandParser:
 
-    @classmethod
-    def platform_method_factory(cls, platform: Union[Platforms],
+class CommandParser:
+    def __init__(self, mgid: MGid, zeropark: ZeroPark, thrive: Thrive):
+        self.mgid = mgid
+        self.zeropark = zeropark
+        self.thrive = thrive
+
+    def platform_method_factory(self, platform: Union[Platforms],
                                 command: Commands):
         method_factory = {
             Platforms.MGID: {
-                Commands.list_campaigns: mgid.list_campaigns,
-                Commands.stats_campaign: mgid.stats_campaign,
-                Commands.spent_campaign: mgid.spent_campaign,
-                Commands.campaign_bot_traffic: mgid.campaign_bot_traffic,
-                Commands.widgets_top: mgid.widgets_top,
-                Commands.widgets_high_cpa: mgid.widgets_high_cpa,
-                Commands.widgets_low_cpa: mgid.widgets_low_cpa,
-                Commands.widgets_kill_longtail: mgid.widgets_kill_longtail,
-                Commands.widgets_turn_on_all: mgid.widgets_turn_on_all,
-                Commands.widget_kill_bot_traffic: mgid.widget_kill_bot_traffic,
+                Commands.list_campaigns: self.mgid.list_campaigns,
+                Commands.stats_campaign: self.mgid.stats_campaign,
+                Commands.spent_campaign: self.mgid.spent_campaign,
+                Commands.campaign_bot_traffic: self.mgid.campaign_bot_traffic,
+                Commands.widgets_top: self.mgid.widgets_top,
+                Commands.widgets_high_cpa: self.mgid.widgets_high_cpa,
+                Commands.widgets_low_cpa: self.mgid.widgets_low_cpa,
+                Commands.widgets_kill_longtail: self.mgid.widgets_kill_longtail,
+                Commands.widgets_turn_on_all: self.mgid.widgets_turn_on_all,
+                Commands.widget_kill_bot_traffic: self.mgid.widget_kill_bot_traffic,
             },
             Platforms.ZEROPARK: {
-                Commands.list_campaigns: zeropark.list_campaigns,
-                Commands.stats_campaign: zeropark.stats_campaign,
-                Commands.spent_campaign: zeropark.spent_campaign,
-                # Commands.campaign_bot_traffic: zeropark.campaign_bot_traffic,
-                Commands.widgets_top: zeropark.widgets_top,
-                Commands.widgets_high_cpa: zeropark.widgets_high_cpa,
-                Commands.widgets_low_cpa: zeropark.widgets_low_cpa,
-                Commands.widgets_kill_longtail: zeropark.widgets_kill_longtail,
-                Commands.widgets_turn_on_all: zeropark.widgets_turn_on_all,
-                # Commands.widget_kill_bot_traffic: zeropark.widget_kill_bot_traffic,
+                Commands.list_campaigns: self.zeropark.list_campaigns,
+                Commands.stats_campaign: self.zeropark.stats_campaign,
+                Commands.spent_campaign: self.zeropark.spent_campaign,
+                # Commands.campaign_bot_traffic: self.zeropark.campaign_bot_traffic,
+                Commands.widgets_top: self.zeropark.widgets_top,
+                Commands.widgets_high_cpa: self.zeropark.widgets_high_cpa,
+                Commands.widgets_low_cpa: self.zeropark.widgets_low_cpa,
+                Commands.widgets_kill_longtail: self.zeropark.widgets_kill_longtail,
+                Commands.widgets_turn_on_all: self.zeropark.widgets_turn_on_all,
+                # Commands.widget_kill_bot_traffic: self.zeropark.widget_kill_bot_traffic,
             },
             Platforms.THRIVE: {
-                Commands.list_campaigns: thrive.list_campaigns,
-                Commands.list_sources: thrive.list_sources,
-                Commands.stats_campaign: thrive.stats_campaigns,
+                Commands.list_campaigns: self.thrive.list_campaigns,
+                Commands.list_sources: self.thrive.list_sources,
+                Commands.stats_campaign: self.thrive.stats_campaigns,
             },
         }
         return method_factory[platform][command]
 
-    @classmethod
-    def parse_command(cls, message: str) -> Tuple[Callable, Dict[str, Union[str, List[str]]]]:
+    def parse_command(self, message: str) -> Tuple[Callable, Dict[str, Union[str, List[str]]]]:
         command_args = {}
         for pattern in COMMANDS_PATTERNS:
             match = pattern.match(message.lower())
@@ -92,10 +95,10 @@ class CommandParser:
         group_dict = match.groupdict()
         command_args['command'] = group_dict['cmd']
         command_args['platform'] = group_dict['platform']
-        command_args['output_format'] = cls.get_output_format_from_command(message)
-        # if (extra_query_args := cls.get_extra_query_args_from_command(message)):
+        command_args['output_format'] = self.get_output_format_from_command(message)
+        # if (extra_query_args := self.get_extra_query_args_from_command(message)):
         #     command_args['extra_query_args'] = extra_query_args
-        if (fields := cls.get_fields_from_command(message)):
+        if (fields := self.get_fields_from_command(message)):
             command_args['fields'] = fields
         for optional_arg in [
             'threshold',
@@ -125,26 +128,23 @@ class CommandParser:
                 arg_name, value = list(match.groupdict().items())[0]
                 command_args[arg_name] = value
 
-        command_handler = cls.platform_method_factory(command_args['platform'], command_args['command'])
+        command_handler = self.platform_method_factory(command_args['platform'], command_args['command'])
         return command_handler, command_args
 
-    @classmethod
-    def get_fields_from_command(cls, command) -> Optional[List[str]]:
+    def get_fields_from_command(self, command) -> Optional[List[str]]:
         if not (match := re_patterns.Flags.FILTER_FIELDS.search(command)):
             return None
         match_fields = match.group('fields')
         fields = match_fields.strip(',').split(',')
         return fields
 
-    @classmethod
-    def get_output_format_from_command(cls, command):
+    def get_output_format_from_command(self, command):
         match = re_patterns.Flags.OUTPUT_FORMAT.search(command)
         if not match:
             return DEFAULT_OUTPUT_FORMAT
         output_format = match.group('output_format')
         return output_format
 
-    @classmethod
-    def get_extra_query_args_from_command(cls, command):
+    def get_extra_query_args_from_command(self, command):
         # TODO: implement adding extra args to command
         return None

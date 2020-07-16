@@ -11,7 +11,8 @@ from typing import Union
 import discord
 
 from bot.controllers import MessageHandler
-from errors import BaseCustomException
+from errors import INTERNAL_ERROR_MSG, BaseCustomException
+from extensions import helper_docs
 
 TOKEN = os.environ['DISCORD_TOKEN']
 GUILD = os.environ['DISCORD_GUILD']
@@ -43,24 +44,25 @@ async def on_ready():
 
 
 async def handle_content(content):
-    resp: Union[dict, list, str]
-    output_format: Union['json', 'list', 'str', 'csv']
+
     try:
+        is_valid_command, args = helper_docs.parse_command(content)
+        if not is_valid_command:
+            help_message = args
+            return help_message
+
+        resp: Union[dict, list, str]
+        output_format: Union['json', 'list', 'str', 'csv']
         resp, output_format = MESSAGE_HANDLER.handle_message(content)
         # for now - not doing anything with output_format, and asuming all responses are in str format.
     except Exception as err:
-        err_resp = {
-            "Response": "ERROR",
-            "Type": "Internal Error",
-        }
         if isinstance(err, BaseCustomException):
             logging.error(f'[!] ERROR: {err.dict()}')
-            err_resp['message'] = err.message
+            INTERNAL_ERROR_MSG['message'] = err.message if hasattr(err, 'message') else str(err)
         else:
             logging.error(f'[!] ERROR: {err}')
         traceback.print_tb(err.__traceback__)
-        result = MESSAGE_HANDLER.format_response(err_resp)
-        return result
+        resp = MESSAGE_HANDLER.format_response(INTERNAL_ERROR_MSG)
 
     return resp
 
@@ -69,27 +71,28 @@ async def handle_content(content):
 async def on_message(message):
     if message.guild.name not in [GUILD, GUILD_DEV]:
         return
-    if message.guild.name == GUILD:
+    if message.guild.name == GUILD:  # response to specific channel (DEV or PROD)
         if os.getenv('DEV'):
             return
     if message.author == client.user:  # ignore bot messages
         return
-    _id = str(uuid.uuid4())[:4]  # new message id
-    logging.debug(f'{_id} | FROM: {message.author} | MSG: {message.content}')
-    resp = await handle_content(message.content)
-    logging.debug(f'{_id} | RESP: {resp}')
+    if not message.content.startswith('/'):  # ignore non-commands
+        return
+
+    try:
+        resp = await handle_content(message.content.lower())
+    except Exception as e:
+        logging.error(e)
+        resp = MESSAGE_HANDLER.format_response(INTERNAL_ERROR_MSG)
+
     if resp.strip() == '':
         return await message.channel.send('Empty Results for Given Command'
                                           ' (Try Widening the Time-Interval for RequestedData)')
-    if isinstance(resp, (list, dict)):
-        resp_msg = dumps(resp, indent=2)
-    else:
-        resp_msg = resp
+    resp_msg = dumps(resp, indent=2) if isinstance(resp, (list, dict)) else resp
     if len(resp_msg) > MAX_NUMBER_LINES:
         # sends resp in multiple messages if exceeds tha max chars per message.
         for block_resp in wrap(resp_msg, MAX_NUMBER_LINES):
             await message.channel.send(block_resp)
-
         return
     await message.channel.send(resp_msg)
 
