@@ -10,6 +10,7 @@ from typing import Union
 import discord
 
 from bot.controllers import MessageHandler
+from constants import DEBUG, DEV
 from errors import INTERNAL_ERROR_MSG, BaseCustomException, InvalidCommand
 from extensions import helper_docs
 from utils import groupify_list_strings
@@ -35,7 +36,7 @@ async def on_ready():
         f'{guild_dev.name}(id: {guild_dev.id})\n'
     )
     now_format = datetime.now().strftime(r'%d.%m.%y, %H:%M:%S')
-    if os.getenv('DEV'):
+    if DEV:
         logging.info(f'BOT Connected to {guild_dev.name}')
         await channel_dev.send(f'[BOT-DEV] [{now_format}] Connected!')
     else:
@@ -72,9 +73,10 @@ async def handle_content(content):
 async def on_message(message):
     if message.guild.name not in [GUILD, GUILD_DEV]:
         return
-    if message.guild.name == GUILD:  # response to specific channel (DEV or PROD)
-        if os.getenv('DEV'):
-            return
+    # response to specific channel (DEV or PROD)
+    if DEV and message.guild.name == GUILD \
+            or not DEV and message.guild.name == GUILD_DEV:
+        return
     if message.author == client.user:  # ignore bot messages
         return
     if not message.content.startswith('/'):  # ignore non-commands
