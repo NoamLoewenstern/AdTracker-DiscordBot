@@ -34,3 +34,10 @@ async def test_bot_traffic_all_campaigns_7d():
     data = await handle_content(f'/{PLATFORM} {COMMAND} 7d')
     assert log_resp(data, f'{COMMAND}_all_campaigns_7d.txt')
     assert len(data) != 0
+
+
+@pytest.mark.asyncio
+async def test_bot_traffic_all_campaigns_default_d():
+    data = await handle_content(f'/{PLATFORM} {COMMAND}')
+    assert log_resp(data, f'{COMMAND}_all_campaigns_default-d.txt')
+    assert len(data) != 0

@@ -110,8 +110,8 @@ class MGid(PlatformService):
                                      **kwargs) -> List[CampaignStat]:
         url = urls.CAMPAIGNS.STATS_DAILY
         url = update_url_params(url, {'dateInterval': dateInterval,
-                                      'startDate': kwargs.get('startDate', ''),
-                                      'endDate': kwargs.get('endDate', '')})
+                                      'startDate': kwargs.get('startDate') or '',
+                                      'endDate': kwargs.get('endDate') or ''})
         resp = self.get(url).json()
         resp_model = StatsAllCampaignGETResponse(**resp)
         stats = resp_model.campaigns_stat.values()
@@ -159,7 +159,7 @@ class MGid(PlatformService):
             if stat['platform_clicks'] != 0:
                 bot_traffic = stat['thrive_clicks'] / stat['platform_clicks'] * 100
             if bot_traffic != 100:
-                bot_traffic = f'{bot_traffic:02}'
+                bot_traffic = f'{bot_traffic:0>5.2f}'
             result.append({
                 stat['name']: f'{bot_traffic}%',
                 'thrive_clicks': stat['thrive_clicks'],

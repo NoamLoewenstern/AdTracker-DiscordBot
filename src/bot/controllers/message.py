@@ -1,32 +1,28 @@
 import json
 import logging
-import re
-from typing import Optional, Union
+from typing import Union
 
-from errors import InvalidCommand
 from extensions import mgid, thrive, zeropark
 
 from .. import patterns
 from .command import CommandParser
 from .utils import convert_resp_to_raw_string
 
-MGID = 'mgid'
-ZEROPARK = 'zeropark'
-THRIVE = 'thrive'
 DEFAULT_OUTPUT_FORMAT = 'list'
 
 
 class MessageHandler:
-    def __init__(self):
+    output_format_types = {
+        'default': lambda: 'list',
+        'json': lambda resp: format_response(resp),
+    }
 
-        self.output_format_types = {
-            'default': lambda: 'list',
-            'json': lambda resp: format_response(resp),
-        }
+    def __init__(self):
+        self.command_parser = CommandParser(mgid, zeropark, thrive)
 
     def handle_message(self, content: str):
 
-        command_handler, command_args = CommandParser.parse_command(content)
+        command_handler, command_args = self.command_parser.parse_command(content)
         resp = command_handler(**command_args)
         # logging.debug(f"reponse: {resp}")
         resp = self.format_response(resp, format_type=command_args['output_format'])

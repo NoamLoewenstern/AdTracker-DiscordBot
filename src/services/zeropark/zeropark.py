@@ -128,7 +128,7 @@ class ZeroPark(PlatformService):
             if stat['platform_clicks'] != 0:
                 bot_traffic = stat['thrive_clicks'] / stat['platform_clicks'] * 100
             if bot_traffic != 100:
-                bot_traffic = f'{bot_traffic:02}'
+                bot_traffic = f'{bot_traffic:0>5.2f}'
             result.append({
                 stat['name']: f'{bot_traffic}%',
                 'thrive_clicks': stat['thrive_clicks'],
@@ -147,7 +147,7 @@ class ZeroPark(PlatformService):
             if stat['platform_clicks'] != 0:
                 bot_traffic = stat['thrive_clicks'] / stat['platform_clicks']
             if bot_traffic != 100:
-                bot_traffic = f'{bot_traffic:02}'
+                bot_traffic = f'{bot_traffic:0>5.2f}'
             result.append({
                 stat['name']: f'{bot_traffic}%',
                 'thrive_clicks': stat['thrive_clicks'],
