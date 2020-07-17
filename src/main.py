@@ -10,7 +10,7 @@ from typing import Union
 import discord
 
 from bot.controllers import MessageHandler
-from errors import INTERNAL_ERROR_MSG, BaseCustomException
+from errors import INTERNAL_ERROR_MSG, BaseCustomException, InvalidCommand
 from extensions import helper_docs
 from utils import groupify_list_strings
 
@@ -55,6 +55,8 @@ async def handle_content(content):
         output_format: Union['json', 'list', 'str', 'csv']
         resp, output_format = MESSAGE_HANDLER.handle_message(content)
         # for now - not doing anything with output_format, and asuming all responses are in str format.
+    except InvalidCommand as err:
+        resp = f"Invalid Command: {err.command}"
     except Exception as err:
         if isinstance(err, BaseCustomException):
             logging.error(f'[!] ERROR: {err.dict()}')

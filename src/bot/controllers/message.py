@@ -44,4 +44,5 @@ class MessageHandler:
             format_type = 'list'
         if format_type == 'list':
             # didn't implement other formats yet.
-            return convert_resp_to_raw_string(resp)
+            resp = convert_resp_to_raw_string(resp)
+        return resp

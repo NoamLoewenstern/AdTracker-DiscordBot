@@ -31,7 +31,10 @@ def convert_dict_to_raw_string(resp: list):
 def convert_resp_to_raw_string(resp):
     if isinstance(resp, str):
         # all rest-api results are json type.
-        resp = json.loads(resp)
+        try:
+            resp = json.loads(resp)
+        except json.decoder.JSONDecodeError:
+            return resp
     if isinstance(resp, dict):
         # converting to "key: value"
         return convert_dict_to_raw_string(resp)
