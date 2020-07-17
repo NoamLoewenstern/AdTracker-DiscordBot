@@ -1,9 +1,11 @@
 import logging
 import os
 
+from constants import DEBUG, DEV
+
 logging.basicConfig(
     # filename=os.getenv("SERVICE_LOG", "server.log"),
-    level=logging.DEBUG if os.getenv('DEBUG') or os.getenv('DEV') else logging.INFO,
+    level=logging.DEBUG if DEBUG or DEV else logging.INFO,
     format="%(levelname)s: %(asctime)s" \
     # + r"pid:%(process)s module:%(module)s %(message)s",
     + "| %(module)s.py | %(message)s",
