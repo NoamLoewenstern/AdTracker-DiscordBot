@@ -7,10 +7,11 @@ from errors import MyArgparseArgumentError, NotExpectedErrorParsing
 
 from .formatters import ActionGroupFormatter, CommandActionFormatter
 from .parser import ArgumentParser
+from config import DEFAULT_ALL_CAMPAIGNS_ALIAS
 
 
 class ArgsDoc(str, Enum):
-    campaign_id = 'Defaults to All Campaigns'
+    campaign_id = f"'{DEFAULT_ALL_CAMPAIGNS_ALIAS}' All Campaigns (is default if no value passed)"
     time_interval = '(int)d'
     filter_limit = '(int)'
     threshold = '(int|float)'

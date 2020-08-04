@@ -4,7 +4,7 @@ import re
 from enum import Enum
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
-from config import DEFAULT_OUTPUT_FORMAT, DEFAULT_TIME_INTERVAL
+from config import DEFAULT_OUTPUT_FORMAT, DEFAULT_TIME_INTERVAL, DEFAULT_ALL_CAMPAIGNS_ALIAS
 from constants import Platforms
 from errors import InvalidCommand
 from services import MGid, Thrive, ZeroPark
@@ -117,7 +117,9 @@ class CommandParser:
         ]:
             if (group_value := group_dict.get(group_name) or default_value):
                 command_args[group_name] = group_value
-
+        # if passed 'all' for campaign_id -> for all campaigns
+        if command_args['campaign_id'].lower() == DEFAULT_ALL_CAMPAIGNS_ALIAS:
+            command_args['campaign_id'] = None
         # optional flags:
         for pattern in [
             re_patterns.Flags.DATE_RANGE,
