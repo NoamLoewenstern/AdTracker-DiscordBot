@@ -1,10 +1,17 @@
-from .base import BaseCustomException
-from .command import InvalidCampaignId, InvalidCommand, InvalidCommandFlag
+from .base import BaseCustomException, InternalError
+from .command import (InvalidCampaignIdError, InvalidCommandError,
+                      InvalidCommandFlagError)
 from .network import APIError, AuthError
-from .parsers import MyArgparseArgumentError, NotExpectedErrorParsing
-from .platforms import InvalidEmailPassword, InvalidPlatormCampaignName
+from .parsers import (InvalidResponseFormatTypeError, MyArgparseArgumentError,
+                      NotExpectedErrorParsingError)
+from .platforms import (CampaignNameMissingTrackerIDError,
+                        InvalidEmailPasswordError,
+                        InvalidPlatormCampaignNameError)
 
-INTERNAL_ERROR_MSG = {
-    "Response": "ERROR",
-    "Type": "Internal Error",
-}
+
+class ErrorList(list):
+    pass
+
+
+class ErrorDict(dict):
+    pass

@@ -1,9 +1,10 @@
-import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from pydantic import BaseModel
 
-from utils import DictForcedStringKeys, merged_objs
+from constants import DEBUG
+from errors import CampaignNameMissingTrackerIDError, ErrorList
+from utils import DictForcedStringKeys, merge_objs
 
 from ..thrive import Thrive
 from .common_service import CommonService
@@ -33,7 +34,7 @@ class PlatformService(CommonService):
         return self._campaigns
 
     def get_thrive_id(self, campaign: Union[BaseModel, Dict[Union['id', 'name'], Union[str, int]]],
-                      raise_=not os.getenv('DEBUG')) -> Optional[str]:
+                      raise_=not DEBUG) -> Optional[str]:
         return get_thrive_id_from_camp(campaign=campaign,
                                        raise_=raise_,
                                        platform=type(self).__name__)
@@ -42,16 +43,22 @@ class PlatformService(CommonService):
                             stats: List[Dict],
                             thrive_results: List[Dict],
                             MergedStatsModel: BaseModel,
-                            ) -> List[BaseModel]:
+                            raise_=not DEBUG,
+                            ) -> Tuple[List[BaseModel], ErrorList]:
         merged = []
+        error_stats = ErrorList()
         for stat in stats:
+            try:
+                stat_thrive_id = self.get_thrive_id(stat, raise_=raise_)
+            except CampaignNameMissingTrackerIDError as e:
+                error_stats.append(e.dict())
+                continue
             for thrive_result in thrive_results:
-                if self.get_thrive_id(stat) == str(thrive_result['id']):
+                if stat_thrive_id == str(thrive_result['id']):
                     merged_dict = {**thrive_result, **stat.dict()}
                     merged.append(MergedStatsModel(**merged_dict))
                     break
-                    # logging.debug(f"\tMERGED stats: {stat}")
-        return merged
+        return merged, error_stats
 
     def _merge_and_update_list_objects(self,
                                        list_objects_1: Union[Dict, List[Dict]],
@@ -69,12 +76,12 @@ class PlatformService(CommonService):
         set_d1_keys = set(dict_1)
         set_d2_keys = set(dict_2)
         if set_d1_keys == set_d2_keys:
-            return [merged_objs(dict_1[key], dict_2[key]) for key in set_d1_keys]
+            return [merge_objs(dict_1[key], dict_2[key]) for key in set_d1_keys]
 
         unique_keys_1 = set_d1_keys - set_d2_keys
         unique_keys_2 = set_d2_keys - set_d1_keys
         common_keys = set_d2_keys & set_d1_keys
-        merged_list = [merged_objs(dict_1[key], dict_2[key]) for key in common_keys]
+        merged_list = [merge_objs(dict_1[key], dict_2[key]) for key in common_keys]
         if just_common:
             return merged_list
         merged_list.extend(dict_1[key] for key in unique_keys_1)

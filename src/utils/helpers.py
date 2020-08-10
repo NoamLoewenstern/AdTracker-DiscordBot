@@ -46,7 +46,7 @@ def chunks(lst: list, n: int):
         yield lst[i:i + n]
 
 
-def merged_objs(obj1: Dict[str, Dict], obj2: Dict[str, Dict]) -> List[Dict]:
+def merge_objs(obj1: Dict[str, Dict], obj2: Dict[str, Dict]) -> List[Dict]:
     common_keys = set(obj1) & set(obj2)
 
     combined = {
