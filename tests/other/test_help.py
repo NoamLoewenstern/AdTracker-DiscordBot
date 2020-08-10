@@ -2,7 +2,7 @@
 import pytest
 
 from bot.controllers.command import Commands
-from main import handle_content
+from tests import handle_content
 
 from . import log_resp
 

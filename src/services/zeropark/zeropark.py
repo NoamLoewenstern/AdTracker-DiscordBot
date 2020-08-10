@@ -1,8 +1,12 @@
-import logging
-from typing import Any, Dict, List, Optional, Union
+from logger import logger
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from pydantic.errors import ListError
 
 from config import MAX_URL_PARAMS_SIZE
-from errors import APIError
+from constants import DEBUG
+from errors import APIError, ErrorList
+from errors.platforms import CampaignNameMissingTrackerIDError
 # from extensions import Thrive
 from utils import (DictForcedStringKeys, alias_param, append_url_params,
                    chunks, filter_result_by_fields, operator_factory,
@@ -33,7 +37,7 @@ def adjust_interval_params(func):
 alias_param_campaignNameOrId = alias_param(
     alias='campaignNameOrId',
     key='campaign_id',
-    callback=lambda value: str(value)
+    callback=lambda value: str(value) if value else value
 )
 
 
@@ -92,21 +96,26 @@ class ZeroPark(PlatformService):
                        campaignNameOrId: str = None,
                        fields: Optional[List[str]] = ['id', 'name', 'platform_clicks', 'cost', 'conv',
                                                       'cpa', 'roi', 'revenue', 'profit', 'redirects', 'target_type'],
-                       **kwargs) -> List['MergedWithThriveStats.dict']:
+                       raise_=not DEBUG,
+                       **kwargs) -> Tuple[List['MergedWithThriveStats.dict'], ListError]:
         kwargs.update({
             'campaignNameOrId': campaignNameOrId,
             'as_json': False,
         })
         stats = self.stats_campaign_pure_platform(**kwargs)
         # * spent -> from platfrom, cost -> from thrive
-        tracker_result = self.thrive.stats_campaigns(
-            campaign_id=self.get_thrive_id(self.campaigns[campaignNameOrId])
-            if campaignNameOrId else None,
-            time_interval=kwargs.get('time_interval'),
-        )
-        merged_stats = self._merge_thrive_stats(stats, tracker_result, MergedWithThriveStats)
+        if campaignNameOrId:
+            try:
+                thrive_id = self.get_thrive_id(self.campaigns[campaignNameOrId], raise_=raise_)
+            except CampaignNameMissingTrackerIDError as e:
+                return [], ErrorList([e.dict()])
+        else:
+            thrive_id = None
+        tracker_result = self.thrive.stats_campaigns(campaign_id=thrive_id,
+                                                     time_interval=kwargs.get('time_interval'))
+        merged_stats, error_stats = self._merge_thrive_stats(stats, tracker_result, MergedWithThriveStats)
         result = filter_result_by_fields(merged_stats, fields)
-        return result
+        return result, error_stats
 
     def spent_campaign(self, *,
                        min_spent=0.0001,
@@ -121,7 +130,7 @@ class ZeroPark(PlatformService):
     def campaign_bot_traffic(self, *,
                              fields: List[str] = ['name', 'id', 'thrive_clicks', 'platform_clicks'],
                              **kwargs) -> list:
-        stats = self.stats_campaign(fields=fields, **kwargs)
+        stats, error_stats = self.stats_campaign(fields=fields, **kwargs)
         result = []
         for stat in stats:
             bot_traffic = 0
@@ -134,13 +143,13 @@ class ZeroPark(PlatformService):
                 'thrive_clicks': stat['thrive_clicks'],
                 'platform_clicks': stat['platform_clicks'],
             })
-        return result
+        return result, error_stats
 
     def campaign_bot_traffic_by_widgets(self, *,
                                         fields: List[str] = ['name', 'id',
                                                              'thrive_clicks', 'platform_clicks'],
                                         **kwargs) -> list:
-        stats = self.stats_campaign(fields=fields, **kwargs)
+        stats, error_stats = self.stats_campaign(fields=fields, **kwargs)
         result = []
         for stat in stats:
             bot_traffic = 0
@@ -153,7 +162,7 @@ class ZeroPark(PlatformService):
                 'thrive_clicks': stat['thrive_clicks'],
                 'platform_clicks': stat['platform_clicks'],
             })
-        return result
+        return result, error_stats
 
     @adjust_interval_params
     @alias_param_campaignNameOrId

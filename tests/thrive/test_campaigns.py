@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from main import handle_content
+from tests import handle_content
 
 TEST_CAMPAING_ID = 1056026
 
-# import logging
+# from logger import logger
 PLATFORM = 'thrive'
 
 
@@ -25,11 +25,11 @@ async def test_list_campaigns():
     assert len(data) >= 0
 
 
-@pytest.mark.asyncio
-async def test_list_sources():
-    data = await handle_content(f'/{PLATFORM} sources {TEST_CAMPAING_ID}')
-    log_resp(data, 'list_sources_RESP.txt')
-    assert len(data) != 0
+# @pytest.mark.asyncio
+# async def test_list_sources():
+#     data = await handle_content(f'/{PLATFORM} sources {TEST_CAMPAING_ID}')
+#     log_resp(data, 'list_sources_RESP.txt')
+#     assert len(data) != 0
 
 
 @pytest.mark.asyncio

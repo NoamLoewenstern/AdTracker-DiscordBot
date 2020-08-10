@@ -23,7 +23,7 @@ class CampaignBaseData(BaseModel):
 
     @property
     def thrive_id(self):
-        return get_thrive_id_from_camp({'id': self.id, 'name': self.name})
+        return get_thrive_id_from_camp({'id': self.id, 'name': self.name}, platform='zeropark', raise_=False)
 
     def dict(self, *args, **kwargs):
         return {**super().dict(*args, **kwargs),

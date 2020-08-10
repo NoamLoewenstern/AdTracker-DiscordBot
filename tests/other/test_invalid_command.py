@@ -1,7 +1,7 @@
 
 import pytest
 
-from main import handle_content
+from tests import handle_content
 
 PLATFORM = 'mgid'
 INVALID_COMMAND = "TEST-COMMAND"

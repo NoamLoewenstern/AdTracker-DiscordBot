@@ -1,3 +1,4 @@
+import re
 from functools import wraps
 from typing import Any, Callable, Dict, List, Union
 
@@ -46,7 +47,7 @@ def chunks(lst: list, n: int):
         yield lst[i:i + n]
 
 
-def merged_objs(obj1: Dict[str, Dict], obj2: Dict[str, Dict]) -> List[Dict]:
+def merge_objs(obj1: Dict[str, Dict], obj2: Dict[str, Dict]) -> List[Dict]:
     common_keys = set(obj1) & set(obj2)
 
     combined = {
@@ -72,3 +73,7 @@ def groupify_list_strings(list_strings: List[str], /, size: int = 70, joiner='\n
         cur_iter_text += joiner + block
     if cur_iter_text:
         yield cur_iter_text
+
+
+def is_valid_uuid4(string: str):
+    return bool(re.match(r'\w{8}(-\w{4}){3}-\w{12}', string, re.IGNORECASE))

@@ -1,6 +1,7 @@
 import os
+from enum import Enum
 
-import config
+import logger
 from bot.help import CommandHelpDocumentation
 from services import MGid, Thrive, ZeroPark
 
@@ -9,3 +10,10 @@ mgid = MGid(os.getenv('MGID_CLIENT_ID'), os.getenv('MGID_TOKEN'), thrive)
 zeropark = ZeroPark(os.getenv('ZEROPARK_TOKEN'), thrive)
 
 helper_docs = CommandHelpDocumentation()
+
+
+class OutputFormatTypes(str, Enum):
+    str = 'str'
+    list = 'list'
+    json = 'json'
+    csv = 'csv'

@@ -1,11 +1,13 @@
 import json
 # import os
-import logging
-from typing import Any, Callable, Dict, List, Optional, Union
+from logger import logger
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from config import MAX_URL_PARAMS_SIZE
-from errors import (APIError, InvalidCampaignId, InvalidEmailPassword,
-                    InvalidPlatormCampaignName)
+from constants import DEBUG
+from errors import (APIError, ErrorList, InvalidCampaignIdError,
+                    InvalidEmailPasswordError, InvalidPlatormCampaignNameError)
+from errors.platforms import CampaignNameMissingTrackerIDError
 # from services.thrive import Thrive
 from utils import (DictForcedStringKeys, alias_param, append_url_params,
                    chunks, filter_result_by_fields, operator_factory,
@@ -128,15 +130,21 @@ class MGid(PlatformService):
                        fields: Optional[List[str]] = ['id', 'name', 'platform_clicks', 'cost', 'conv',
                                                       'cpa', 'roi', 'revenue', 'profit', 'target_type'],  # CampaignStat
                        # revenue <- rev, profit'],  # MergedWithThriveStats
-                       **kwargs) -> List['MergedWithThriveStats.dict']:
+                       raise_=not DEBUG,
+                       **kwargs) -> Tuple[List['MergedWithThriveStats.dict'], ErrorList]:
         stats = self.stats_campaign_pure_platform(campaign_id=campaign_id, as_json=False, **kwargs)
-        tracker_result = self.thrive.stats_campaigns(
-            campaign_id=self.get_thrive_id(self.campaigns[campaign_id]) if campaign_id else None,
-            time_interval=kwargs.get('time_interval'),
-        )
-        merged_stats = self._merge_thrive_stats(stats, tracker_result, MergedWithThriveStats)
+        if campaign_id:
+            try:
+                thrive_id = self.get_thrive_id(self.campaigns[campaign_id], raise_=raise_)
+            except CampaignNameMissingTrackerIDError as e:
+                return [], ErrorList([e.dict()])
+        else:
+            thrive_id = None
+        tracker_result = self.thrive.stats_campaigns(campaign_id=thrive_id,
+                                                     time_interval=kwargs.get('time_interval'))
+        merged_stats, error_stats = self._merge_thrive_stats(stats, tracker_result, MergedWithThriveStats)
         result = filter_result_by_fields(merged_stats, fields)
-        return result
+        return result, error_stats
 
     def spent_campaign(self, *,
                        campaign_id: str = None,
@@ -151,8 +159,8 @@ class MGid(PlatformService):
     def campaign_bot_traffic(self, *,
                              campaign_id: str = None,
                              fields: List[str] = ['name', 'id', 'thrive_clicks', 'platform_clicks'],
-                             **kwargs) -> list:
-        stats = self.stats_campaign(campaign_id=campaign_id, fields=fields, **kwargs)
+                             **kwargs) -> Tuple[List, ErrorList]:
+        stats, error_stats = self.stats_campaign(campaign_id=campaign_id, fields=fields, **kwargs)
         result = []
         for stat in stats:
             bot_traffic = 0
@@ -165,12 +173,12 @@ class MGid(PlatformService):
                 'thrive_clicks': stat['thrive_clicks'],
                 'platform_clicks': stat['platform_clicks'],
             })
-        return result
+        return result, error_stats
 
     def get_api_token(self, **kwargs) -> List:
         url = urls.TOKEN.GET_CURRENT
         if not self.email or not self.password:
-            raise InvalidEmailPassword(platform='MGID', data="Must Require Email And Password!")
+            raise InvalidEmailPasswordError(platform='MGID', data="Must Require Email And Password!")
         result = self.post(url, data={'email': self.email, 'password': self.password})
         return result
 
@@ -311,10 +319,15 @@ class MGid(PlatformService):
                                 campaign_id: str,
                                 threshold: float,
                                 dateInterval: DateIntervalParams = 'today',
+                                raise_=not DEBUG,
                                 **kwargs) -> List[Dict]:
+        try:
+            thrive_id = self.get_thrive_id(self.campaigns[campaign_id], raise_=raise_)
+        except CampaignNameMissingTrackerIDError as e:
+            return [], ErrorList([e.dict()])
         tracker_widgets = self.thrive._widgets_stats(
             platform_name='MGID',
-            campaign_id=self.get_thrive_id(self.campaigns[campaign_id]),
+            campaign_id=thrive_id,
             time_interval=kwargs.get('time_interval', ''),
             sort_key='thrive_clicks',
             fields=['id', 'thrive_clicks'])
@@ -346,9 +359,9 @@ class MGid(PlatformService):
 
         just_in_platform = widgets_ids - tracker_widgets_ids
         just_in_tracker = tracker_widgets_ids - widgets_ids
-        logging.info('[MGID] [widget_kill_bot_traffic] Platform Widgets & Tracker Widgets Differences: '
-                     #   f'len(just_in_platform):{len(just_in_platform)}\nlen(just_in_tracker):{len(just_in_tracker)}')
-                     f'{just_in_platform=}\n{just_in_tracker=}')
+        logger.info('[MGID] [widget_kill_bot_traffic] Platform Widgets & Tracker Widgets Differences: '
+                    #   f'len(just_in_platform):{len(just_in_platform)}\nlen(just_in_tracker):{len(just_in_tracker)}')
+                    f'{just_in_platform=}\n{just_in_tracker=}')
 
         merged_widget_data = self._merge_and_update_list_objects(
             tracker_widgets_dict,
@@ -362,5 +375,5 @@ class MGid(PlatformService):
             if bot_percent > int(threshold):
                 bot_widgets_ids.append(widget['id'])
         result = self.widgets_pause(campaign_id=campaign_id, list_widgets=bot_widgets_ids)
-        logging.debug(f'[{campaign_id}] Paused Widgets: {len(bot_widgets_ids)} / {len(merged_widget_data)}')
+        logger.debug(f'[{campaign_id}] Paused Widgets: {len(bot_widgets_ids)} / {len(merged_widget_data)}')
         return result

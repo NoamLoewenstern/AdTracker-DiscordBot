@@ -1,23 +1,23 @@
 import json
-import logging
+from logger import logger
 import re
 from enum import Enum
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
-from config import DEFAULT_OUTPUT_FORMAT, DEFAULT_TIME_INTERVAL
+from config import (DEFAULT_ALL_CAMPAIGNS_ALIAS, DEFAULT_OUTPUT_FORMAT,
+                    DEFAULT_TIME_INTERVAL)
 from constants import Platforms
-from errors import InvalidCommand
+from errors import InvalidCommandError
 from services import MGid, Thrive, ZeroPark
 
 from .. import patterns as re_patterns
-from .utils import convert_resp_to_raw_string
 
 
 class Commands(str, Enum):
     list_campaigns = 'list'
     stats_campaign = 'stats'
     campaign_bot_traffic = 'bot-traffic'
-    list_sources = 'sources'
+    # list_sources = 'sources'
     spent_campaign = 'spent'
     widgets_top = 'widgets-top'
     widgets_high_cpa = 'widgets-high-cpa'
@@ -31,7 +31,7 @@ COMMANDS_PATTERNS = [
     re_patterns.Commands.LIST_CAMPAIGNS,
     re_patterns.Commands.CAMPAIGN_STATS,
     re_patterns.Commands.BOT_TRAFFIC,
-    re_patterns.Commands.LIST_SORCES,
+    # re_patterns.Commands.LIST_SORCES,
     re_patterns.Commands.SPENT_CAMPAIGN,
     re_patterns.Commands.WIDGETS_TOP,
     re_patterns.Commands.WIDGETS_HIGH_CPA,
@@ -48,8 +48,8 @@ class CommandParser:
         self.zeropark = zeropark
         self.thrive = thrive
 
-    def platform_method_factory(self, platform: Union[Platforms],
-                                command: Commands):
+    def get_platform_handler(self, platform: Union[Platforms],
+                             command: Commands):
         method_factory = {
             Platforms.MGID: {
                 Commands.list_campaigns: self.mgid.list_campaigns,
@@ -77,7 +77,7 @@ class CommandParser:
             },
             Platforms.THRIVE: {
                 Commands.list_campaigns: self.thrive.list_campaigns,
-                Commands.list_sources: self.thrive.list_sources,
+                # Commands.list_sources: self.thrive.list_sources,
                 Commands.stats_campaign: self.thrive.stats_campaigns,
             },
         }
@@ -90,7 +90,7 @@ class CommandParser:
             if match:
                 break
         else:
-            raise InvalidCommand(command=message)
+            raise InvalidCommandError(command=message)
 
         group_dict = match.groupdict()
         command_args['command'] = group_dict['cmd']
@@ -107,7 +107,7 @@ class CommandParser:
             if optional_arg in group_dict:
                 command_args[optional_arg] = group_dict[optional_arg]
 
-        # logging.debug(f"msg: {message} | matched: {match.re.pattern} | "
+        # logger.debug(f"msg: {message} | matched: {match.re.pattern} | "
         #               f"platform: {command_args['platform']}")
 
         # params with default value
@@ -115,20 +115,22 @@ class CommandParser:
             ('campaign_id', None),
             ('time_interval', DEFAULT_TIME_INTERVAL),
         ]:
-            if (group_value := group_dict.get(group_name) or default_value):
-                command_args[group_name] = group_value
-
+            command_args[group_name] = group_dict.get(group_name) or default_value
+        # if passed 'all' for campaign_id -> for all campaigns
+        if (command_args.get('campaign_id') or '').lower() == DEFAULT_ALL_CAMPAIGNS_ALIAS:
+            command_args['campaign_id'] = None
         # optional flags:
         for pattern in [
             re_patterns.Flags.DATE_RANGE,
             re_patterns.Flags.TIME_RANGE,
             re_patterns.Flags.FILTER_LIMIT,
+            re_patterns.Flags.IGNORE_ERRORS,
         ]:
             if (match := pattern.search(message)):
                 arg_name, value = list(match.groupdict().items())[0]
                 command_args[arg_name] = value
 
-        command_handler = self.platform_method_factory(command_args['platform'], command_args['command'])
+        command_handler = self.get_platform_handler(command_args['platform'], command_args['command'])
         return command_handler, command_args
 
     def get_fields_from_command(self, command) -> Optional[List[str]]:

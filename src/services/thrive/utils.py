@@ -1,11 +1,11 @@
-import logging
+from logger import logger
 import re
 from typing import Dict, List, Union
 from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
 
 from bot.patterns import DATE_DAYS_INTERVAL_RE, NON_BASE_DATE_INTERVAL_RE
-from errors import InvalidCommandFlag
-from utils import merged_objs
+from errors import InvalidCommandFlagError
+from utils import merge_objs
 
 PATTERN_GET_UID = re.compile(r'^(?P<uid>\d+)s?(?P<subid>\d+)?$', re.IGNORECASE)
 
@@ -47,7 +47,7 @@ def fix_date_interval_value(date_interval: str) -> str:
         return base_intervals[date_interval.lower()]
     if (match := DATE_DAYS_INTERVAL_RE.match(date_interval)):
         return 'interval'
-    raise InvalidCommandFlag(flag='time_range')
+    raise InvalidCommandFlagError(flag='time_range')
 
 
 def subids_to_uids(list_objects: List[Dict['id', str]]) -> List[Dict['id', str]]:
@@ -56,7 +56,7 @@ def subids_to_uids(list_objects: List[Dict['id', str]]) -> List[Dict['id', str]]
     for _id, obj in dict_objects.items():
         match = PATTERN_GET_UID.match(_id)
         if match is None:
-            logging.warning(f"[subids_to_uids] Not Expected! id is not UID format. id: {_id}")
+            logger.warning(f"[subids_to_uids] Not Expected! id is not UID format. id: {_id}")
             continue
         uid = match.group('uid')
         subid = match.group('subid')
@@ -65,5 +65,5 @@ def subids_to_uids(list_objects: List[Dict['id', str]]) -> List[Dict['id', str]]
         if uid not in new_objects:
             new_objects[uid] = obj
         else:
-            new_objects[uid] = merged_objs(new_objects[uid], obj)
+            new_objects[uid] = merge_objs(new_objects[uid], obj)
     return list(new_objects.values())

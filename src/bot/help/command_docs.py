@@ -1,16 +1,19 @@
 import argparse
+import re
 from enum import Enum
+from typing import List
 
 from bot.controllers.command import Commands
+from config import DEFAULT_ALL_CAMPAIGNS_ALIAS
 from constants import Platforms
-from errors import MyArgparseArgumentError, NotExpectedErrorParsing
+from errors import MyArgparseArgumentError, NotExpectedErrorParsingError
 
 from .formatters import ActionGroupFormatter, CommandActionFormatter
 from .parser import ArgumentParser
 
 
 class ArgsDoc(str, Enum):
-    campaign_id = 'Defaults to All Campaigns'
+    campaign_id = f"'{DEFAULT_ALL_CAMPAIGNS_ALIAS}' for All Campaigns (default to {DEFAULT_ALL_CAMPAIGNS_ALIAS} if no value passed)"
     time_interval = '(int)d'
     filter_limit = '(int)'
     threshold = '(int|float)'
@@ -18,8 +21,11 @@ class ArgsDoc(str, Enum):
 
 class FlagsDoc(str, Enum):
     # output_format
-    filter_fields = 'Returns Fields in Specified List.     Example Format: /fields:id,name,spent'
-    filter_limit = 'Returns Up to Given Limit of Results. Example Format: /limit:5'
+    # filter_fields = 'Returns Fields in Specified List.     Example Format: /fields:id,name,spent'
+    fields = 'Returns Fields in Specified List.     Example Format: --fields id,name,spent'
+    # filter_limit = 'Returns Up to Given Limit of Results. Example Format: /limit:5'
+    limit = 'Returns Up to Given Limit of Results. Example Format: --limit 5'
+    ignore_errors = 'Ignore Error Results (if any). Example: --ignore-erros'
 
 
 PLATFORMS = [Platforms.MGID.value, Platforms.ZEROPARK.value]
@@ -32,8 +38,11 @@ class CommandHelpDocumentation:
         self.subparser = self.parser.add_subparsers(title='Commands')
         self._add_commands_to_subparser(self.subparser)
 
-        self.parser.add_argument(FlagsDoc.filter_fields.name, nargs='?', help=FlagsDoc.filter_fields.value)
-        self.parser.add_argument(FlagsDoc.filter_limit.name, nargs='?', help=FlagsDoc.filter_limit.value)
+        self.optional_flags: List[str] = [FlagsDoc.fields.name, FlagsDoc.limit.name]
+        self.parser.add_argument('--' + FlagsDoc.fields.name, nargs='?', help=FlagsDoc.fields.value)
+        self.parser.add_argument('--' + FlagsDoc.limit.name, nargs='?', help=FlagsDoc.limit.value)
+        self.parser.add_argument('--' + FlagsDoc.ignore_errors.name,
+                                 nargs='?', help=FlagsDoc.ignore_errors.value)
 
         self._inject_positional_options_into_usage(self.parser)
 
@@ -48,40 +57,35 @@ class CommandHelpDocumentation:
         stats_campaign.add_argument(ArgsDoc.time_interval.name, nargs='?',
                                     help=ArgsDoc.time_interval.value)
 
-        spent_campaign = subparser.add_parser(
-            Commands.spent_campaign.value, help='List Campaigns SPENT Stats')
+        spent_campaign = subparser.add_parser(Commands.spent_campaign.value,
+                                              help='List Campaigns SPENT Stats')
         spent_campaign.add_argument(ArgsDoc.campaign_id.name, nargs='?', help=ArgsDoc.campaign_id.value)
         spent_campaign.add_argument(ArgsDoc.time_interval.name, nargs='?',
                                     help=ArgsDoc.time_interval.value)
 
         campaign_bot_traffic = subparser.add_parser(Commands.campaign_bot_traffic.value,
                                                     help='List Campaigns BOT TRAFFIC')
-        campaign_bot_traffic.add_argument(ArgsDoc.campaign_id.name,
-                                          nargs='?', help=ArgsDoc.campaign_id.value)
+        campaign_bot_traffic.add_argument(ArgsDoc.campaign_id.name, nargs='?', help=ArgsDoc.campaign_id.value)
         campaign_bot_traffic.add_argument(ArgsDoc.time_interval.name, nargs='?',
                                           help=ArgsDoc.time_interval.value)
 
         widgets_top = subparser.add_parser(Commands.widgets_top.value,
                                            help="List Campaign's TOP Widgets CONVERSIONS")
         widgets_top.add_argument(ArgsDoc.campaign_id.name)
-        widgets_top.add_argument(ArgsDoc.filter_limit.name, nargs='?',
-                                 help=ArgsDoc.filter_limit.value)
-        widgets_top.add_argument(ArgsDoc.time_interval.name, nargs='?',
-                                 help=ArgsDoc.time_interval.value)
+        widgets_top.add_argument(ArgsDoc.filter_limit.name, nargs='?', help=ArgsDoc.filter_limit.value)
+        widgets_top.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
         widgets_high_cpa = subparser.add_parser(Commands.widgets_high_cpa.value,
                                                 help="List Campaign's Widgets with HIGH CPA")
         widgets_high_cpa.add_argument(ArgsDoc.campaign_id.name)
         widgets_high_cpa.add_argument(ArgsDoc.threshold.name, help=ArgsDoc.threshold.value)
-        widgets_high_cpa.add_argument(ArgsDoc.time_interval.name, nargs='?',
-                                      help=ArgsDoc.time_interval.value)
+        widgets_high_cpa.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
         widgets_low_cpa = subparser.add_parser(Commands.widgets_low_cpa.value,
                                                help="List Campaign's Widgets with LOW CPA")
         widgets_low_cpa.add_argument(ArgsDoc.campaign_id.name)
         widgets_low_cpa.add_argument(ArgsDoc.threshold.name, help=ArgsDoc.threshold.value)
-        widgets_low_cpa.add_argument(ArgsDoc.time_interval.name, nargs='?',
-                                     help=ArgsDoc.time_interval.value)
+        widgets_low_cpa.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
         widgets_kill_longtail = subparser.add_parser(Commands.widgets_kill_longtail.value,
                                                      help=r"PAUSE Campaign's Widgets Where SPENT Under {threshold}")
@@ -96,8 +100,10 @@ class CommandHelpDocumentation:
                                                        help=r"PAUSE Campaign's Widgets with {threshold} Percent BOT-TRAFFIC")
         widget_kill_bot_traffic.add_argument(ArgsDoc.campaign_id.name)
         widget_kill_bot_traffic.add_argument(ArgsDoc.threshold.name, help=ArgsDoc.threshold.value)
-        widget_kill_bot_traffic.add_argument(ArgsDoc.time_interval.name,
-                                             help=ArgsDoc.time_interval.value)
+        widget_kill_bot_traffic.add_argument(ArgsDoc.time_interval.name, help=ArgsDoc.time_interval.value)
+
+        # list_sources = subparser.add_parser(Commands.list_sources.value,
+        #                                     help=r"List Sources no Platform (Tracker)")
 
         return subparser
 
@@ -129,6 +135,21 @@ class CommandHelpDocumentation:
     def program_help(self):
         return self.command_group_help
 
+    def _fixed_optional_flags_in_command(self, args: List[str]):
+        # TODO  parse from 'patterns.py' to get actual optional flags,
+        """for now - assuming this parse is just for positional-args,
+        and now actually using this parser JUST FOR COMMAND-HELP-DOCS and NOT for getting data
+        so for now - removing flag checks """
+        return [arg for arg in args if not re.match(r'^(--|/)\w+[ :=]?', arg)]
+        # fixed_args = []
+        # for arg in args:
+        #     if arg.startswith('/'):
+        #         arg = '--' + arg[1:]
+        #     if arg.startswith('--'):
+        #         arg = re.sub('^(--\w+?):(.+)$', '\\1=\\2', arg)
+        #     fixed_args.append(arg)
+        # return fixed_args
+
     def parse_command(self, command: str):
         args = command.split(' ')
         if args[0] in ('/?', '/help'):
@@ -136,9 +157,10 @@ class CommandHelpDocumentation:
         if len(args) == 1 or (len(args) == 2 and '-h' in args):
             return False, self.program_help()
         try:
-            parsed_args = self.parser.parse_args(args[1:])
+            new_args = self._fixed_optional_flags_in_command(args[1:])
+            parsed_args = self.parser.parse_args(new_args)
             return True, parsed_args
         except (MyArgparseArgumentError, argparse.ArgumentError) as e:
             return False, e.message
         except SystemExit:
-            raise NotExpectedErrorParsing("[!] Unexpected Parsing Command, Needs to be Checked.")
+            raise NotExpectedErrorParsingError("[!] Unexpected Parsing Command, Needs to be Checked.")

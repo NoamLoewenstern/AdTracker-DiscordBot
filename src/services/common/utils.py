@@ -1,4 +1,4 @@
-import logging
+from logger import logger
 import os
 import re
 from datetime import date, timedelta
@@ -6,19 +6,22 @@ from functools import wraps
 from typing import Dict, Optional, Union
 
 from bot.patterns import DATE_DAYS_INTERVAL_RE, NON_BASE_DATE_INTERVAL_RE
-from errors import InvalidPlatormCampaignName
+from constants import DEBUG
+from errors import CampaignNameMissingTrackerIDError
 
 
 def get_thrive_id_from_camp(campaign: Dict[Union['id', 'name'], Union[str, int]],
-                            raise_=not os.getenv('DEBUG'),
+                            raise_=not DEBUG,
                             platform='') -> Optional[int]:
     if not (match := re.match(r'(?P<thrive_camp_id>\d+) ', campaign['name'])):
-        err_msg = f"Campaign {campaign['id']} Named '{campaign['name']}' Doesn't Contain THRIVE Camp-ID."
+        err_msg = f"Campaign {campaign['id']} Named '{campaign['name']}' Missing Tracker ID Reference."
+        logger.error(f'{err_msg}')
         if raise_:
-            raise InvalidPlatormCampaignName(
+            raise CampaignNameMissingTrackerIDError(
+                id=campaign['id'],
+                name=campaign['name'],
                 platform=platform,
-                data=err_msg)
-        logging.error(f'[!] {err_msg}')
+            )
         return None
     return match.group('thrive_camp_id')
 

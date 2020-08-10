@@ -1,18 +1,11 @@
-import logging
-import os
+import socket
 
-from constants import DEBUG, DEV
+from utils.helpers import is_valid_uuid4
 
-logging.basicConfig(
-    # filename=os.getenv("SERVICE_LOG", "server.log"),
-    level=logging.DEBUG if DEBUG or DEV else logging.INFO,
-    format="%(levelname)s: %(asctime)s" \
-    # + r"pid:%(process)s module:%(module)s %(message)s",
-    + "| %(module)s.py | %(message)s",
-    datefmt=r"%d/%m/%y %H:%M:%S",
-)
-
-
+HOSTNAME = socket.gethostname()
+RUNNING_ON_SERVER = is_valid_uuid4(HOSTNAME)
 DEFAULT_OUTPUT_FORMAT = 'list'
 DEFAULT_TIME_INTERVAL = '360d'
 MAX_URL_PARAMS_SIZE = 500
+DEFAULT_ALL_CAMPAIGNS_ALIAS = 'all'
+DEBUG_COMMAND_FLAG = '--debug'
