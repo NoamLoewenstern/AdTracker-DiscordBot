@@ -13,8 +13,8 @@ from bot.controllers.message import MessageHandler, OutputFormatTypes
 from config import DEBUG_COMMAND_FLAG, RUNNING_ON_SERVER
 from constants import DEBUG, DEV
 from errors import (BaseCustomException, ErrorList, InternalError,
-                    InvalidCommandError)
-from errors.network import APIError
+                    InvalidCommandError, PydanticParseObjError)
+from errors.network import APIError, AuthError
 from errors.platforms import CampaignNameMissingTrackerIDError
 from extensions import helper_docs
 from logger import logger
@@ -97,17 +97,14 @@ async def handle_content(content: str) -> Tuple[str]:
     except InvalidCommandError as err:
         resp = ''
         error_resp = f"Invalid Command: {err.command}"
-    except CampaignNameMissingTrackerIDError as err:
+    except (CampaignNameMissingTrackerIDError, APIError, AuthError, PydanticParseObjError, BaseCustomException) as err:
         resp = ''
         error_resp = MESSAGE_HANDLER.format_response(err.dict())
-    except APIError as err:
-        resp = ''
-        error_resp = MESSAGE_HANDLER.format_response(err.data)
     except Exception as err:
         err_msg = getattr(err, 'message', getattr(err, 'data', str(err)))
         internal_error = InternalError(message=err_msg)
         # -> if isinstance BaseCustomException
-        logger.error(f'[!] ERROR: {getattr(err, "dict", lambda: None)()}')
+        logger.error(f'[!] ERROR: {internal_error.dict()}')
         traceback.print_tb(err.__traceback__)
         resp = ''
         error_resp = MESSAGE_HANDLER.format_response(internal_error.dict())

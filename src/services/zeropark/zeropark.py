@@ -79,9 +79,8 @@ class ZeroPark(PlatformService):
             url = update_url_params(url, {'campaignNameOrId': campaignNameOrId})
         resp = self.get(url).json()
         resp_model = CampaignStatsResponse(**resp)
-        result = extended_stats = ListExtendedStats.parse_obj(
-            [ExtendedStats(**elem.stats.dict(), **elem.details.dict())
-             for elem in resp_model.elements]).__root__
+        result = extended_stats = ListExtendedStats.parse_obj([ExtendedStats(**elem.stats.dict(), **elem.details.dict())
+                                                               for elem in resp_model.elements]).__root__
         if campaignNameOrId is not None:  # returning specific campaign
             result = [stat for stat in extended_stats
                       if campaignNameOrId in (stat['id'], stat['name'])]

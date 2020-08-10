@@ -6,6 +6,7 @@ import requests
 
 from constants import DEFAULT_TIMEOUT_API_REQUEST
 from errors import APIError
+from errors.network import AuthError
 from logger import logger
 
 
@@ -47,21 +48,21 @@ class CommonService:
         if not resp.ok:
             raise APIError(platform='',
                            data={**(resp.json_content if resp.is_json else {}),
-                                 'url': self.base_url + url,
+                                 #  'url': self.base_url + url,
                                  'reason': resp.reason,
                                  'error': (resp.json_content.get('error', '')
                                            if resp.is_json else resp.content),
                                  'status_code': resp.status_code},
                            explain=resp.reason)
-        if resp.json_content and 'NOT LOGGED IN' in json.dumps(resp.json_content).upper():
-            raise APIError(platform='',
-                           data={**(resp.json_content if resp.is_json else {}),
-                                 'url': self.base_url + url,
-                                 'reason': "NOT LOGGED IN - Check API-KEYS",
-                                 'error': (resp.json_content.get('error', '')
-                                           if resp.is_json else resp.content),
-                                 'status_code': resp.status_code},
-                           explain=resp.reason)
+        if resp.status_code == 403 or resp.json_content and 'NOT LOGGED IN' in json.dumps(resp.json_content).upper():
+            raise AuthError(platform='',
+                            data={**(resp.json_content if resp.is_json else {}),
+                                  #  'url': self.base_url + url,
+                                  'reason': "NOT LOGGED IN - Check API-KEYS",
+                                  'error': (resp.json_content.get('error', '')
+                                            if resp.is_json else resp.content),
+                                  'status_code': resp.status_code},
+                            explain=resp.reason)
         return resp
 
     def get(self, url: str, *args, **kwargs):
