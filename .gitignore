@@ -188,3 +188,4 @@ tests/**/http/*.json
 scrips.sh
 **/**/tempCodeRunnerFile.py
 temp/
+tempCodeRunnerFile.*

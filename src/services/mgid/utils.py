@@ -3,7 +3,7 @@ from typing import Dict, Optional, Union
 from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
 
 from bot.patterns import DATE_DAYS_INTERVAL_RE, NON_BASE_DATE_INTERVAL_RE
-from errors import InvalidCommandFlag
+from errors import InvalidCommandFlagError
 
 
 def add_token_to_url(url: str, token: str) -> str:
@@ -54,4 +54,4 @@ def fix_date_interval_value(date_interval: str) -> str:
         return base_intervals[date_interval.lower()]
     if (match := DATE_DAYS_INTERVAL_RE.match(date_interval)):
         return 'interval'
-    raise InvalidCommandFlag(flag='time_range')
+    raise InvalidCommandFlagError(flag='time_range')

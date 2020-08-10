@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Union
 
 from pydantic import Field, validator
 
-from errors import InvalidPlatormCampaignName
+from errors import InvalidPlatormCampaignNameError
 from services.thrive.schemas import CampaignExtendedInfoStats
 
 from ..common.common_service import TargetType
@@ -28,7 +28,7 @@ class CampaignBaseData(BaseModel):
 
     @property
     def thrive_id(self):
-        return get_thrive_id_from_camp({'id': self.id, 'name': self.name})
+        return get_thrive_id_from_camp({'id': self.id, 'name': self.name}, platform='mgid', raise_=False)
 
     def dict(self, *args, **kwargs):
         return {**super().dict(*args, **kwargs),

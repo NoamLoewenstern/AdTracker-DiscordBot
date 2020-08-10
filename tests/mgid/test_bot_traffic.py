@@ -1,7 +1,7 @@
 
 import pytest
 
-from main import handle_content
+from tests import handle_content
 
 from . import PLATFORM, TEST_CAMPAING_ID, log_resp
 
@@ -40,4 +40,11 @@ async def test_bot_traffic_all_campaigns_7d():
 async def test_bot_traffic_all_campaigns_default_d():
     data = await handle_content(f'/{PLATFORM} {COMMAND}')
     assert log_resp(data, f'{COMMAND}_all_campaigns_default-d.txt')
+    assert len(data) != 0
+
+
+@pytest.mark.asyncio
+async def test_bot_traffic_all_campaigns_default_d_ignore_errors():
+    data = await handle_content(f'/{PLATFORM} {COMMAND} /ignore-errors')
+    assert log_resp(data, f'{COMMAND}_all_campaigns_default-d_ignore-errors.txt')
     assert len(data) != 0

@@ -1,7 +1,7 @@
 
 import pytest
 
-from main import handle_content
+from tests import handle_content
 
 from . import PLATFORM, TEST_CAMPAING_ID, log_resp
 

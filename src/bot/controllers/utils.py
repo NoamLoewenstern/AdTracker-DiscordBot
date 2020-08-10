@@ -1,5 +1,7 @@
 import json
 
+from errors.parsers import InvalidResponseFormatTypeError
+
 
 def convert_dict_to_raw_string(resp: list):
     raw_resp = []
@@ -47,3 +49,4 @@ def convert_resp_to_raw_string(resp):
             else:
                 raw_resp.append(str(item))
         return '\n\n'.join(raw_resp).strip()
+    raise InvalidResponseFormatTypeError()
