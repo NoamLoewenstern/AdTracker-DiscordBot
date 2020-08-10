@@ -49,8 +49,8 @@ class CommonService:
                            data={**(resp.json_content if resp.is_json else {}),
                                  'url': self.base_url + url,
                                  'reason': resp.reason,
-                                 'errors': (resp.json_content.get('errors', '')
-                                            if resp.is_json else resp.content),
+                                 'error': (resp.json_content.get('error', '')
+                                           if resp.is_json else resp.content),
                                  'status_code': resp.status_code},
                            explain=resp.reason)
         if resp.json_content and 'NOT LOGGED IN' in json.dumps(resp.json_content).upper():
@@ -58,8 +58,8 @@ class CommonService:
                            data={**(resp.json_content if resp.is_json else {}),
                                  'url': self.base_url + url,
                                  'reason': "NOT LOGGED IN - Check API-KEYS",
-                                 'errors': (resp.json_content.get('errors', '')
-                                            if resp.is_json else resp.content),
+                                 'error': (resp.json_content.get('error', '')
+                                           if resp.is_json else resp.content),
                                  'status_code': resp.status_code},
                            explain=resp.reason)
         return resp

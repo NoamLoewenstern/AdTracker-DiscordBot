@@ -14,6 +14,7 @@ from config import DEBUG_COMMAND_FLAG, RUNNING_ON_SERVER
 from constants import DEBUG, DEV
 from errors import (BaseCustomException, ErrorList, InternalError,
                     InvalidCommandError)
+from errors.network import APIError
 from errors.platforms import CampaignNameMissingTrackerIDError
 from extensions import helper_docs
 from logger import logger
@@ -99,8 +100,12 @@ async def handle_content(content: str) -> Tuple[str]:
     except CampaignNameMissingTrackerIDError as err:
         resp = ''
         error_resp = MESSAGE_HANDLER.format_response(err.dict())
+    except APIError as err:
+        resp = ''
+        error_resp = MESSAGE_HANDLER.format_response(err.data)
     except Exception as err:
-        internal_error = InternalError(message=getattr(err, 'message', str(err)))
+        err_msg = getattr(err, 'message', getattr(err, 'data', str(err)))
+        internal_error = InternalError(message=err_msg)
         # -> if isinstance BaseCustomException
         logger.error(f'[!] ERROR: {getattr(err, "dict", lambda: None)()}')
         traceback.print_tb(err.__traceback__)
