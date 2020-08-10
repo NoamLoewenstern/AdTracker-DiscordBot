@@ -1,4 +1,3 @@
-from logger import logger
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from pydantic.errors import ListError
@@ -7,6 +6,7 @@ from config import MAX_URL_PARAMS_SIZE
 from constants import DEBUG
 from errors import APIError, ErrorList
 from errors.platforms import CampaignNameMissingTrackerIDError
+from logger import logger
 # from extensions import Thrive
 from utils import (DictForcedStringKeys, alias_param, append_url_params,
                    chunks, filter_result_by_fields, operator_factory,
