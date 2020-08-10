@@ -1,7 +1,7 @@
 
 import pytest
 
-from main import handle_content
+from tests import handle_content
 
 from . import PLATFORM, log_resp
 from .test_widgets_turn_on_all import widgets_turn_on_all
