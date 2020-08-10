@@ -6,6 +6,7 @@ from tests import handle_content
 from . import PLATFORM, TEST_CAMPAING_ID, log_resp
 
 COMMAND = 'widgets-top'
+TEST_CAMPAING_ID = 'e556d672-d6f0-11ea-9f7c-12e5dcaa70ed'
 
 
 @pytest.mark.asyncio

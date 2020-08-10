@@ -1,5 +1,4 @@
 import json
-from logger import logger
 import re
 from enum import Enum
 from typing import Callable, Dict, List, Optional, Tuple, Union
@@ -8,6 +7,7 @@ from config import (DEFAULT_ALL_CAMPAIGNS_ALIAS, DEFAULT_OUTPUT_FORMAT,
                     DEFAULT_TIME_INTERVAL)
 from constants import Platforms
 from errors import InvalidCommandError
+from logger import logger
 from services import MGid, Thrive, ZeroPark
 
 from .. import patterns as re_patterns
@@ -81,6 +81,9 @@ class CommandParser:
                 Commands.stats_campaign: self.thrive.stats_campaigns,
             },
         }
+        method_factory[Platforms.MG] = method_factory[Platforms.MGID]
+        method_factory[Platforms.ZP] = method_factory[Platforms.ZEROPARK]
+        method_factory[Platforms.TRACKER] = method_factory[Platforms.THRIVE]
         return method_factory[platform][command]
 
     def parse_command(self, message: str) -> Tuple[Callable, Dict[str, Union[str, List[str]]]]:

@@ -1,3 +1,4 @@
+import json
 from enum import Enum
 from typing import Callable, List, Optional, Union
 
@@ -5,6 +6,7 @@ import requests
 
 from constants import DEFAULT_TIMEOUT_API_REQUEST
 from errors import APIError
+from errors.network import AuthError
 from logger import logger
 
 
@@ -42,15 +44,25 @@ class CommonService:
             logger.error('[!] unexpected resp: is not json')
         if resp.ok and (resp.is_json and 'errors' in resp.json_content):
             logger.error(f'[!] resp is ok, but "Errors" in response: {resp.json_content["errors"]}')
-        if not resp.ok:  # or (resp.is_json and 'errors' in resp.json_content):
+        # or (resp.is_json and 'errors' in resp.json_content):
+        if not resp.ok:
             raise APIError(platform='',
                            data={**(resp.json_content if resp.is_json else {}),
-                                 'url': self.base_url + url,
+                                 #  'url': self.base_url + url,
                                  'reason': resp.reason,
-                                 'errors': (resp.json_content.get('errors', '')
-                                            if resp.is_json else resp.content),
+                                 'error': (resp.json_content.get('error', '')
+                                           if resp.is_json else resp.content),
                                  'status_code': resp.status_code},
                            explain=resp.reason)
+        if resp.status_code == 403 or resp.json_content and 'NOT LOGGED IN' in json.dumps(resp.json_content).upper():
+            raise AuthError(platform='',
+                            data={**(resp.json_content if resp.is_json else {}),
+                                  #  'url': self.base_url + url,
+                                  'reason': "NOT LOGGED IN - Check API-KEYS",
+                                  'error': (resp.json_content.get('error', '')
+                                            if resp.is_json else resp.content),
+                                  'status_code': resp.status_code},
+                            explain=resp.reason)
         return resp
 
     def get(self, url: str, *args, **kwargs):

@@ -1,6 +1,4 @@
 import json
-# import os
-from logger import logger
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from config import MAX_URL_PARAMS_SIZE
@@ -8,6 +6,8 @@ from constants import DEBUG
 from errors import (APIError, ErrorList, InvalidCampaignIdError,
                     InvalidEmailPasswordError, InvalidPlatormCampaignNameError)
 from errors.platforms import CampaignNameMissingTrackerIDError
+# import os
+from logger import logger
 # from services.thrive import Thrive
 from utils import (DictForcedStringKeys, alias_param, append_url_params,
                    chunks, filter_result_by_fields, operator_factory,

@@ -3,7 +3,7 @@ from .command import (InvalidCampaignIdError, InvalidCommandError,
                       InvalidCommandFlagError)
 from .network import APIError, AuthError
 from .parsers import (InvalidResponseFormatTypeError, MyArgparseArgumentError,
-                      NotExpectedErrorParsingError)
+                      NotExpectedErrorParsingError, PydanticParseObjError)
 from .platforms import (CampaignNameMissingTrackerIDError,
                         InvalidEmailPasswordError,
                         InvalidPlatormCampaignNameError)

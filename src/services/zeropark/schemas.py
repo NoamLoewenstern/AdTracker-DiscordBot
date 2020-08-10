@@ -159,7 +159,7 @@ class MergedWithThriveStats(ExtendedStats):
 class TargetStats(BaseModel):
     spent: float
     payout: int
-    averageBid: float
+    aversageBid: float = None
     redirects: int
     conversions: int
     returnOfInvestment: float = None

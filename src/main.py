@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 from json import dump, dumps
 from tempfile import NamedTemporaryFile
+from time import sleep
 from typing import Dict, List, Tuple, Union
 
 import discord
@@ -12,7 +13,8 @@ from bot.controllers.message import MessageHandler, OutputFormatTypes
 from config import DEBUG_COMMAND_FLAG, RUNNING_ON_SERVER
 from constants import DEBUG, DEV
 from errors import (BaseCustomException, ErrorList, InternalError,
-                    InvalidCommandError)
+                    InvalidCommandError, PydanticParseObjError)
+from errors.network import APIError, AuthError
 from errors.platforms import CampaignNameMissingTrackerIDError
 from extensions import helper_docs
 from logger import logger
@@ -95,13 +97,14 @@ async def handle_content(content: str) -> Tuple[str]:
     except InvalidCommandError as err:
         resp = ''
         error_resp = f"Invalid Command: {err.command}"
-    except CampaignNameMissingTrackerIDError as err:
+    except (CampaignNameMissingTrackerIDError, APIError, AuthError, PydanticParseObjError, BaseCustomException) as err:
         resp = ''
         error_resp = MESSAGE_HANDLER.format_response(err.dict())
     except Exception as err:
-        internal_error = InternalError(message=getattr(err, 'message', str(err)))
+        err_msg = getattr(err, 'message', getattr(err, 'data', str(err)))
+        internal_error = InternalError(message=err_msg)
         # -> if isinstance BaseCustomException
-        logger.error(f'[!] ERROR: {getattr(err, "dict", lambda: None)()}')
+        logger.error(f'[!] ERROR: {internal_error.dict()}')
         traceback.print_tb(err.__traceback__)
         resp = ''
         error_resp = MESSAGE_HANDLER.format_response(internal_error.dict())
@@ -124,19 +127,20 @@ async def send_msg(channel, msg: str) -> None:
 
 @client.event
 async def on_message(message):
-    if message.guild.name not in [GUILD, GUILD_DEV]:
+    if message.author == client.user:  # ignore bot messages
         return
-    # DEBUG
+    guild_name = message.guild.name
+    if guild_name not in [GUILD, GUILD_DEV]:
+        return
     command = message.content.lower()
+    # DEBUG
     if DEBUG_COMMAND_FLAG in command:
         if RUNNING_ON_SERVER:
             return
         command = command.replace(DEBUG_COMMAND_FLAG, '').strip()
     # response to specific channel (DEV or PROD)
-    if DEV and message.guild.name == GUILD \
-            or not DEV and message.guild.name == GUILD_DEV:
-        return
-    if message.author == client.user:  # ignore bot messages
+    if guild_name == GUILD_DEV and not DEV \
+            or guild_name == GUILD and DEV:
         return
     if not command.startswith('/'):  # ignore non-commands
         return
@@ -150,12 +154,14 @@ async def on_message(message):
 
     # resp = dumps(resp, indent=2) if isinstance(resp, (list, dict, tuple)) else resp
     # error_resp = dumps(error_resp, indent=2) if isinstance(error_resp, (list, dict, tuple)) else resp
-
+    channel = message.channel
     if resp:
-        await send_msg(message.channel, resp)
+        await send_msg(channel, resp)
     if error_resp:
-        await send_msg(message.channel, '__*ERRORS:*__\n' + error_resp)
+        sleep(0.5)
+        await send_msg(channel, '__*ERRORS:*__\n' + error_resp)
 
 
 if __name__ == '__main__':
+    logger.info('STARTED BOT LISTENING ON ' + 'DEV' if DEV else 'PROD')
     client.run(TOKEN)
