@@ -1,5 +1,5 @@
 # import os
-import logging
+from logger import logger
 from typing import Dict, List, Optional, Union
 
 from utils import (alias_param, append_url_params, filter_result_by_fields,
@@ -116,8 +116,8 @@ class Thrive(CommonService):
             if widget_stat['id'] == 'unknown':
                 unknown_widgets_ids.append(list_objects.pop(i))
         if unknown_widgets_ids:
-            logging.error(f'[thrive] [widgets_stats] [platform:{platform}] '
-                          f'{len(unknown_widgets_ids)} Unknown Widgets.')
+            logger.error(f'[thrive] [widgets_stats] [platform:{platform}] '
+                         f'{len(unknown_widgets_ids)} Unknown Widgets.')
         return unknown_widgets_ids
 
     def _convert_subids_to_uids(self, list_objects: List[Dict['id', str]]) -> List[Dict['id', str]]:

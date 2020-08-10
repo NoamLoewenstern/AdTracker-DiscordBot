@@ -1,4 +1,4 @@
-import logging
+from logger import logger
 import os
 import re
 from datetime import date, timedelta
@@ -15,7 +15,7 @@ def get_thrive_id_from_camp(campaign: Dict[Union['id', 'name'], Union[str, int]]
                             platform='') -> Optional[int]:
     if not (match := re.match(r'(?P<thrive_camp_id>\d+) ', campaign['name'])):
         err_msg = f"Campaign {campaign['id']} Named '{campaign['name']}' Missing Tracker ID Reference."
-        logging.error(f'{err_msg}')
+        logger.error(f'{err_msg}')
         if raise_:
             raise CampaignNameMissingTrackerIDError(
                 id=campaign['id'],

@@ -1,5 +1,5 @@
 import json
-import logging
+from logger import logger
 from typing import Tuple, Union
 
 from bot.patterns import ignore_errors_keyname
@@ -34,7 +34,7 @@ class MessageHandler:
             if not isinstance(error_resp, ErrorList):
                 internal_error = InternalError(
                     type='Internal Warning, Should return Errors in ErrorList type.')
-                logging.warning(str(internal_error))
+                logger.warning(str(internal_error))
         if ignore_errors_keyname in command_args:
             error_resp.clear()
         if format_output:

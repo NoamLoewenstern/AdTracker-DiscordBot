@@ -1,4 +1,4 @@
-import logging
+from logger import logger
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from pydantic.errors import ListError

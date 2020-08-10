@@ -1,5 +1,5 @@
 import json
-import logging
+from logger import logger
 import re
 from enum import Enum
 from typing import Callable, Dict, List, Optional, Tuple, Union
@@ -107,7 +107,7 @@ class CommandParser:
             if optional_arg in group_dict:
                 command_args[optional_arg] = group_dict[optional_arg]
 
-        # logging.debug(f"msg: {message} | matched: {match.re.pattern} | "
+        # logger.debug(f"msg: {message} | matched: {match.re.pattern} | "
         #               f"platform: {command_args['platform']}")
 
         # params with default value

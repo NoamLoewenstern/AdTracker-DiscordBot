@@ -1,4 +1,3 @@
-import logging
 import os
 import traceback
 import uuid
@@ -8,14 +7,15 @@ from tempfile import NamedTemporaryFile
 from typing import Dict, List, Tuple, Union
 
 import discord
-from discord import channel
 
 from bot.controllers.message import MessageHandler, OutputFormatTypes
+from config import DEBUG_COMMAND_FLAG, RUNNING_ON_SERVER
 from constants import DEBUG, DEV
 from errors import (BaseCustomException, ErrorList, InternalError,
                     InvalidCommandError)
 from errors.platforms import CampaignNameMissingTrackerIDError
 from extensions import helper_docs
+from logger import logger
 from utils import groupify_list_strings
 
 TOKEN = os.environ['DISCORD_TOKEN']
@@ -33,17 +33,17 @@ async def on_ready():
     channel_prod = [channel for channel in guild.channels if str(channel.type) == 'text'][0]
     channel_dev = [channel for channel in guild_dev.channels if str(channel.type) == 'text'][0]
 
-    logging.info(
+    logger.info(
         f'{client.user} is connected to the following guilds:\n'
         f'{guild.name}(id: {guild.id})\n'
         f'{guild_dev.name}(id: {guild_dev.id})\n'
     )
     now_format = datetime.now().strftime(r'%d.%m.%y, %H:%M:%S')
     if DEV:
-        logging.info(f'BOT Connected to {guild_dev.name}')
+        logger.info(f'BOT Connected to {guild_dev.name}')
         await channel_dev.send(f'[BOT-DEV] [{now_format}] Connected!')
     else:
-        logging.info(f'BOT Connected to {guild.name}')
+        logger.info(f'BOT Connected to {guild.name}')
         # await channel_prod.send(f'[BOT] [{now_format}] Connected!')
 
 
@@ -101,7 +101,7 @@ async def handle_content(content: str) -> Tuple[str]:
     except Exception as err:
         internal_error = InternalError(message=getattr(err, 'message', str(err)))
         # -> if isinstance BaseCustomException
-        logging.error(f'[!] ERROR: {getattr(err, "dict", lambda: None)()}')
+        logger.error(f'[!] ERROR: {getattr(err, "dict", lambda: None)()}')
         traceback.print_tb(err.__traceback__)
         resp = ''
         error_resp = MESSAGE_HANDLER.format_response(internal_error.dict())
@@ -126,19 +126,25 @@ async def send_msg(channel, msg: str) -> None:
 async def on_message(message):
     if message.guild.name not in [GUILD, GUILD_DEV]:
         return
+    # DEBUG
+    command = message.content.lower()
+    if DEBUG_COMMAND_FLAG in command:
+        if RUNNING_ON_SERVER:
+            return
+        command = command.replace(DEBUG_COMMAND_FLAG, '').strip()
     # response to specific channel (DEV or PROD)
     if DEV and message.guild.name == GUILD \
             or not DEV and message.guild.name == GUILD_DEV:
         return
     if message.author == client.user:  # ignore bot messages
         return
-    if not message.content.startswith('/'):  # ignore non-commands
+    if not command.startswith('/'):  # ignore non-commands
         return
 
     try:
-        resp, error_resp = await handle_content(message.content.lower())
+        resp, error_resp = await handle_content(command)
     except Exception as e:
-        logging.error(e)
+        logger.error(e)
         resp = ''
         error_resp = MESSAGE_HANDLER.format_response(InternalError.dict())
 

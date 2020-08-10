@@ -1,4 +1,4 @@
-import logging
+from logger import logger
 import re
 from typing import Dict, List, Union
 from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
@@ -56,7 +56,7 @@ def subids_to_uids(list_objects: List[Dict['id', str]]) -> List[Dict['id', str]]
     for _id, obj in dict_objects.items():
         match = PATTERN_GET_UID.match(_id)
         if match is None:
-            logging.warning(f"[subids_to_uids] Not Expected! id is not UID format. id: {_id}")
+            logger.warning(f"[subids_to_uids] Not Expected! id is not UID format. id: {_id}")
             continue
         uid = match.group('uid')
         subid = match.group('subid')

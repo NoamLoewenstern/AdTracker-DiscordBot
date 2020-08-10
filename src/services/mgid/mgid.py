@@ -1,6 +1,6 @@
 import json
 # import os
-import logging
+from logger import logger
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from config import MAX_URL_PARAMS_SIZE
@@ -359,9 +359,9 @@ class MGid(PlatformService):
 
         just_in_platform = widgets_ids - tracker_widgets_ids
         just_in_tracker = tracker_widgets_ids - widgets_ids
-        logging.info('[MGID] [widget_kill_bot_traffic] Platform Widgets & Tracker Widgets Differences: '
-                     #   f'len(just_in_platform):{len(just_in_platform)}\nlen(just_in_tracker):{len(just_in_tracker)}')
-                     f'{just_in_platform=}\n{just_in_tracker=}')
+        logger.info('[MGID] [widget_kill_bot_traffic] Platform Widgets & Tracker Widgets Differences: '
+                    #   f'len(just_in_platform):{len(just_in_platform)}\nlen(just_in_tracker):{len(just_in_tracker)}')
+                    f'{just_in_platform=}\n{just_in_tracker=}')
 
         merged_widget_data = self._merge_and_update_list_objects(
             tracker_widgets_dict,
@@ -375,5 +375,5 @@ class MGid(PlatformService):
             if bot_percent > int(threshold):
                 bot_widgets_ids.append(widget['id'])
         result = self.widgets_pause(campaign_id=campaign_id, list_widgets=bot_widgets_ids)
-        logging.debug(f'[{campaign_id}] Paused Widgets: {len(bot_widgets_ids)} / {len(merged_widget_data)}')
+        logger.debug(f'[{campaign_id}] Paused Widgets: {len(bot_widgets_ids)} / {len(merged_widget_data)}')
         return result

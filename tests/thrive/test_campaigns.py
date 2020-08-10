@@ -8,7 +8,7 @@ from tests import handle_content
 
 TEST_CAMPAING_ID = 1056026
 
-# import logging
+# from logger import logger
 PLATFORM = 'thrive'
 
 

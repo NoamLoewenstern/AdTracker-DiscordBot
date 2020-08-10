@@ -1,4 +1,3 @@
-import logging
 from enum import Enum
 from typing import Callable, List, Optional, Union
 
@@ -6,6 +5,7 @@ import requests
 
 from constants import DEFAULT_TIMEOUT_API_REQUEST
 from errors import APIError
+from logger import logger
 
 
 class TargetType(str, Enum):
@@ -33,15 +33,15 @@ class CommonService:
         kwargs.setdefault('timeout', DEFAULT_TIMEOUT_API_REQUEST)
         for url_hook in self.url_hooks:
             url = url_hook(url)
-        logging.info(f"[REQ] [{method.upper()}] "
-                     f"{self.base_url + url[:200] + '...' if len(url) > 200 else ''} ")
+        logger.info(f"[REQ] [{method.upper()}] "
+                    f"{self.base_url + url[:200] + '...' if len(url) > 200 else ''} ")
         resp = getattr(self.session, method)(self.base_url + url, *args, **kwargs)
         resp.is_json = 'application/json' in resp.headers['Content-Type']
         resp.json_content = resp.json() if resp.is_json else None
         if not resp.is_json:
-            logging.error('[!] unexpected resp: is not json')
+            logger.error('[!] unexpected resp: is not json')
         if resp.ok and (resp.is_json and 'errors' in resp.json_content):
-            logging.error(f'[!] resp is ok, buy "Errors" in response: {resp.json_content["errors"]}')
+            logger.error(f'[!] resp is ok, but "Errors" in response: {resp.json_content["errors"]}')
         if not resp.ok:  # or (resp.is_json and 'errors' in resp.json_content):
             raise APIError(platform='',
                            data={**(resp.json_content if resp.is_json else {}),

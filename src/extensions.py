@@ -1,7 +1,7 @@
 import os
 from enum import Enum
 
-import config
+import logger
 from bot.help import CommandHelpDocumentation
 from services import MGid, Thrive, ZeroPark
 
