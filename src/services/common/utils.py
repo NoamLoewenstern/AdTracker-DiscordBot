@@ -1,4 +1,3 @@
-from logger import logger
 import os
 import re
 from datetime import date, timedelta
@@ -8,6 +7,7 @@ from typing import Dict, Optional, Union
 from bot.patterns import DATE_DAYS_INTERVAL_RE, NON_BASE_DATE_INTERVAL_RE
 from constants import DEBUG
 from errors import CampaignNameMissingTrackerIDError
+from logger import logger
 
 
 def get_thrive_id_from_camp(campaign: Dict[Union['id', 'name'], Union[str, int]],
