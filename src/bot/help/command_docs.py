@@ -14,6 +14,7 @@ from .parser import ArgumentParser
 
 class ArgsDoc(str, Enum):
     campaign_id = f"'{DEFAULT_ALL_CAMPAIGNS_ALIAS}' for All Campaigns (default to {DEFAULT_ALL_CAMPAIGNS_ALIAS} if no value passed)"
+    widget_id = f"'{DEFAULT_ALL_CAMPAIGNS_ALIAS}' for All Widgets (default to {DEFAULT_ALL_CAMPAIGNS_ALIAS} if no value passed)"
     time_interval = '(int)d'
     filter_limit = '(int)'
     threshold = '(int|float)'
@@ -68,6 +69,13 @@ class CommandHelpDocumentation:
         campaign_bot_traffic.add_argument(ArgsDoc.campaign_id.name, nargs='?', help=ArgsDoc.campaign_id.value)
         campaign_bot_traffic.add_argument(ArgsDoc.time_interval.name, nargs='?',
                                           help=ArgsDoc.time_interval.value)
+
+        widgets_stats = subparser.add_parser(Commands.widgets_stats.value,
+                                           help="List Campaign's Widgets STATS")
+        widgets_stats.add_argument(ArgsDoc.campaign_id.name)
+        widgets_stats.add_argument(ArgsDoc.widget_id.name, nargs='?', help=ArgsDoc.widget_id.value)
+        widgets_stats.add_argument(ArgsDoc.filter_limit.name, nargs='?', help=ArgsDoc.filter_limit.value)
+        widgets_stats.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
         widgets_top = subparser.add_parser(Commands.widgets_top.value,
                                            help="List Campaign's TOP Widgets CONVERSIONS")

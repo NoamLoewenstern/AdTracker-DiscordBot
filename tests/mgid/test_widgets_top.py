@@ -1,12 +1,20 @@
 
 import pytest
 
+from bot.patterns import FIELDS_OPTIONS_FLAG
 from tests import handle_content
 
 from . import PLATFORM, log_resp
 
 TEST_CAMPAING_ID = 1023198
 COMMAND = 'widgets-top'
+
+
+@pytest.mark.asyncio
+async def test_top_widgets_list_fields():
+    data = await handle_content(f'/{PLATFORM} {COMMAND} {TEST_CAMPAING_ID} --{FIELDS_OPTIONS_FLAG}')
+    assert log_resp(data, f'{COMMAND}_list_fields.txt')
+    assert len(data) != 0
 
 
 @pytest.mark.asyncio

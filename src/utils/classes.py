@@ -1,7 +1,12 @@
-class DictForcedStringKeys(dict):
-    def __init__(self, d=None):
+from typing import Any, Callable, Union
+
+
+class AbstractDictForcedKey(dict):
+    def __init__(self, d=None, /, *, on_key_hook: Callable[[Union[int, str]], Any],
+                 **kwargs):
+        self.__on_key_hook = on_key_hook
         if d is not None:
-            super().__init__(self.__convert_keys(d))
+            super().__init__(self.__convert_keys(d), **kwargs)
 
     def __getitem__(self, key):
         return super().__getitem__(str(key))
@@ -22,6 +27,12 @@ class DictForcedStringKeys(dict):
         return super().update(self.__convert_keys(d))
 
     def __convert_keys(self, d: dict):
+        new_d = {}
         for key, value in list(d.items()):
-            d[str(key)] = value
-        return d
+            new_d[self.__on_key_hook(key)] = value
+        return new_d
+
+
+class DictForcedStringKeys(AbstractDictForcedKey):
+    def __init__(self, d=None, /, **kargs):
+        super().__init__(d, on_key_hook=str, **kargs)

@@ -1,6 +1,6 @@
 import json
 from enum import Enum
-from typing import Callable, List, Optional, Union
+from typing import Callable, List, Literal, Optional, Union
 
 import requests
 
@@ -29,7 +29,7 @@ class CommonService:
 
     def _req(self,
              url: str,
-             method: Union['get', 'post', 'put', 'patch', 'delete'],
+             method: Literal['get', 'post', 'put', 'patch', 'delete'],
              *args: list,
              **kwargs: dict):
         kwargs.setdefault('timeout', DEFAULT_TIMEOUT_API_REQUEST)

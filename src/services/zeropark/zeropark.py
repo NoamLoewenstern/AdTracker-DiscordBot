@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from pydantic.errors import ListError
 
@@ -8,12 +8,12 @@ from errors import APIError, ErrorList
 from errors.platforms import CampaignNameMissingTrackerIDError
 from logger import logger
 # from extensions import Thrive
-from utils import (DictForcedStringKeys, alias_param, append_url_params,
-                   chunks, filter_result_by_fields, operator_factory,
+from utils import (OPERATORS_MAP, alias_param, append_url_params, chunks,
                    update_url_params)
 
 from ..common.platform import PlatformService
-from ..common.utils import add_interval_startend_dates
+from ..common.utils import (add_interval_startend_dates, fields_list_hook,
+                            filter_result_by_fields)
 from . import urls
 from .schemas import (CampaignStatsResponse, ExtendedStats, ListExtendedStats,
                       MergedWithThriveStats, TargetStatsByCampaignResponse,
@@ -40,12 +40,19 @@ alias_param_campaignNameOrId = alias_param(
     callback=lambda value: str(value) if value else value
 )
 
+alias_param_widget_name = alias_param(
+    alias='widget_name',
+    key='widget_id',
+    callback=lambda value: str(value) if value else value
+)
+
 
 class ZeroPark(PlatformService):
     # TODO check different types of statuses - to filter out the deleted ones
     def __init__(self, token: str, thrive, *args, **kwargs):
         super().__init__(thrive=thrive,
                          base_url=urls.CAMPAIGNS.BASE_URL,
+                         platform='ZeroPark',
                          *args, **kwargs)
         self.session.headers.update({'api-token': token})
 
@@ -57,6 +64,7 @@ class ZeroPark(PlatformService):
             self._campaigns = self._update_campaigns(campaigns)
         return self._campaigns
 
+    @fields_list_hook(ExtendedStats)
     def list_campaigns(self,
                        fields: Optional[List[str]] = ['id', 'name'],
                        **kwargs) -> list:
@@ -64,13 +72,14 @@ class ZeroPark(PlatformService):
         stats = filter_result_by_fields(stats, fields)
         return stats
 
-    @adjust_interval_params
+    @fields_list_hook(ExtendedStats)
     @alias_param_campaignNameOrId
+    @adjust_interval_params
     def stats_campaign_pure_platform(self,
                                      campaignNameOrId: str = None,
                                      interval: str = "TODAY",
                                      as_json=True,
-                                     **kwargs) -> list:
+                                     **kwargs) -> List[ExtendedStats]:
         url = urls.CAMPAIGNS.STATS
         url = update_url_params(url, {'interval': interval,
                                       'startDate': kwargs.get('startDate', ''),
@@ -90,13 +99,14 @@ class ZeroPark(PlatformService):
             result = [stat.dict() for stat in result]
         return result
 
+    @fields_list_hook(MergedWithThriveStats)
     @alias_param_campaignNameOrId
     def stats_campaign(self,
                        campaignNameOrId: str = None,
                        fields: Optional[List[str]] = ['id', 'name', 'platform_clicks', 'cost', 'conv',
                                                       'cpa', 'roi', 'revenue', 'profit', 'redirects', 'target_type'],
                        raise_=not DEBUG,
-                       **kwargs) -> Tuple[List['MergedWithThriveStats.dict'], ListError]:
+                       **kwargs) -> Tuple[List[ExtendedStats], ListError]:
         kwargs.update({
             'campaignNameOrId': campaignNameOrId,
             'as_json': False,
@@ -116,10 +126,11 @@ class ZeroPark(PlatformService):
         result = filter_result_by_fields(merged_stats, fields)
         return result, error_stats
 
+    @fields_list_hook(MergedWithThriveStats)
     def spent_campaign(self, *,
                        min_spent=0.0001,
                        fields: List[str] = ['name', 'id', 'spent'],
-                       **kwargs) -> list:
+                       **kwargs) -> List[MergedWithThriveStats]:
         kwargs.update({'fields': fields})
         stats = self.stats_campaign_pure_platform(**kwargs)
         filtered_by_spent = [stat for stat in stats if stat['spent'] >= min_spent]
@@ -163,8 +174,10 @@ class ZeroPark(PlatformService):
             })
         return result, error_stats
 
-    @adjust_interval_params
+    @fields_list_hook(TargetStatsMergedData)
     @alias_param_campaignNameOrId
+    @alias_param_widget_name
+    @adjust_interval_params
     def widgets_stats(self, *,
                       campaignNameOrId: str,
                       interval: str = "TODAY",
@@ -208,9 +221,10 @@ class ZeroPark(PlatformService):
         """
         return self.widgets_stats(**kwargs)
 
+    @fields_list_hook(TargetStatsMergedData)
     def widgets_filter_cpa(self, *,
                            threshold: float,
-                           operator: Union['eq', 'ne', 'lt', 'gt', 'le', 'ge'] = 'le',
+                           operator: Literal['eq', 'ne', 'lt', 'gt', 'le', 'ge'] = 'le',
                            fields: List[str] = ['target', 'spent', 'conversions', 'ecpa'],
                            **kwargs,
                            ) -> List[TargetStatsMergedData]:
@@ -224,7 +238,7 @@ class ZeroPark(PlatformService):
         filtered_by_conversions = [stat for stat in widgets_stats if stat['conversions'] > 0]
         filtered_by_cpa = [stat for stat in filtered_by_conversions
                            # the operator is used here:
-                           if getattr(stat['ecpa'], operator_factory[operator])(float(threshold))]
+                           if getattr(stat['ecpa'], OPERATORS_MAP[operator])(float(threshold))]
         result = filter_result_by_fields(filtered_by_cpa, fields)
         return result
 

@@ -16,6 +16,12 @@ class CampaignNameMissingTrackerIDError(InvalidPlatormCampaignNameError):
         self.name = name
 
 
+class InvalidCampaignIDError(InvalidPlatormCampaignNameError):
+    def __init__(self, campaign_id: str, platform: str = '', message='Invalid Campaign ID'):
+        super().__init__(platform, message)
+        self.campaign_id = campaign_id
+
+
 class InvalidEmailPasswordError(BaseCustomException):
     def __init__(self, platform: str, message='Invalid Email Password', data=None):
         super().__init__(platform, message, data)

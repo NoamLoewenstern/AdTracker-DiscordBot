@@ -1,11 +1,10 @@
 from .base import BaseCustomException, InternalError
-from .command import (InvalidCampaignIdError, InvalidCommandError,
-                      InvalidCommandFlagError)
+from .command import InvalidCommandError, InvalidCommandFlagError
 from .network import APIError, AuthError
 from .parsers import (InvalidResponseFormatTypeError, MyArgparseArgumentError,
                       NotExpectedErrorParsingError, PydanticParseObjError)
 from .platforms import (CampaignNameMissingTrackerIDError,
-                        InvalidEmailPasswordError,
+                        InvalidCampaignIDError, InvalidEmailPasswordError,
                         InvalidPlatormCampaignNameError)
 
 

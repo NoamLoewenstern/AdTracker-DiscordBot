@@ -15,7 +15,8 @@ from constants import DEBUG, DEV
 from errors import (BaseCustomException, ErrorList, InternalError,
                     InvalidCommandError, PydanticParseObjError)
 from errors.network import APIError, AuthError
-from errors.platforms import CampaignNameMissingTrackerIDError
+from errors.platforms import (CampaignNameMissingTrackerIDError,
+                              InvalidCampaignIDError)
 from extensions import helper_docs
 from logger import logger
 from utils import groupify_list_strings
@@ -30,6 +31,10 @@ MAX_NUMBER_LINES = 2000
 
 @client.event
 async def on_ready():
+    start_msg = 'STARTED BOT LISTENING ON ' + 'DEV' if DEV else 'PROD'
+    print(start_msg)
+    logger.info(start_msg)
+
     guild = discord.utils.get(client.guilds, name=GUILD)
     guild_dev = discord.utils.get(client.guilds, name=GUILD_DEV)
     channel_prod = [channel for channel in guild.channels if str(channel.type) == 'text'][0]
@@ -83,21 +88,24 @@ def format_error_resp(list_error_resp: Union[str, List[Union[str, Dict[str, str]
     return ret_error_resp
 
 
-async def handle_content(content: str) -> Tuple[str]:
+async def handle_content(command: str) -> Tuple[str]:
+    command = command.lower()
     try:
-        is_valid_command, args = helper_docs.parse_command(content)
+
+        is_valid_command, args = helper_docs.parse_command(command)
         if not is_valid_command:
             help_message = args
             return help_message, ErrorList()
 
         resp: Union[dict, list, str]
         output_format: OutputFormatTypes
-        resp, error_resp, output_format = MESSAGE_HANDLER.handle_message(content, format_output=False)
+        resp, error_resp, output_format = MESSAGE_HANDLER.handle_message(command, format_output=False)
         # for now - not doing anything with output_format, and asuming all responses are in str format.
     except InvalidCommandError as err:
         resp = ''
         error_resp = f"Invalid Command: {err.command}"
-    except (CampaignNameMissingTrackerIDError, APIError, AuthError, PydanticParseObjError, BaseCustomException) as err:
+    except (CampaignNameMissingTrackerIDError, APIError, AuthError, InvalidCampaignIDError,
+            PydanticParseObjError, BaseCustomException) as err:
         resp = ''
         error_resp = MESSAGE_HANDLER.format_response(err.dict())
     except Exception as err:
@@ -132,8 +140,8 @@ async def on_message(message):
     guild_name = message.guild.name
     if guild_name not in [GUILD, GUILD_DEV]:
         return
-    command = message.content.lower()
     # DEBUG
+    command = message.content
     if DEBUG_COMMAND_FLAG in command:
         if RUNNING_ON_SERVER:
             return
@@ -163,5 +171,4 @@ async def on_message(message):
 
 
 if __name__ == '__main__':
-    logger.info('STARTED BOT LISTENING ON ' + 'DEV' if DEV else 'PROD')
     client.run(TOKEN)

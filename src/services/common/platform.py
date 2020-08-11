@@ -1,22 +1,23 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from pydantic import BaseModel
 
 from constants import DEBUG
 from errors import CampaignNameMissingTrackerIDError, ErrorList
-from utils import DictForcedStringKeys, merge_objs
+from utils import merge_objs
 
 from ..thrive import Thrive
 from .common_service import CommonService
-from .utils import get_thrive_id_from_camp
+from .utils import CampaignIDsDict, get_thrive_id_from_camp
 
 
 class PlatformService(CommonService):
-    def __init__(self, thrive: Thrive, *args, **kargs):
+    def __init__(self, thrive: Thrive, platform: str = '', *args, **kargs):
         super().__init__(*args, **kargs)
         self.thrive = thrive
         self.thrive.platforms.append(self)
         self._campaigns: Dict[str, Any] = None
+        self.platform = platform
 
     @property
     def campaigns(self):
@@ -25,15 +26,15 @@ class PlatformService(CommonService):
 
     @campaigns.setter
     def campaigns(self, d: dict):
-        self._campaigns = DictForcedStringKeys(d)
+        self._campaigns = CampaignIDsDict(d, platform=self.platform)
 
     def _update_campaigns(self, campaigns: List[BaseModel]):
         if self._campaigns is None:
-            self._campaigns = DictForcedStringKeys()
+            self._campaigns = CampaignIDsDict(platform=self.platform)
         self._campaigns.update({campaign['id']: campaign for campaign in campaigns})
         return self._campaigns
 
-    def get_thrive_id(self, campaign: Union[BaseModel, Dict[Union['id', 'name'], Union[str, int]]],
+    def get_thrive_id(self, campaign: Union[BaseModel, Dict[Literal['id', 'name'], Union[str, int]]],
                       raise_=not DEBUG) -> Optional[str]:
         return get_thrive_id_from_camp(campaign=campaign,
                                        raise_=raise_,
@@ -56,7 +57,7 @@ class PlatformService(CommonService):
             for thrive_result in thrive_results:
                 if stat_thrive_id == str(thrive_result['id']):
                     merged_dict = {**thrive_result, **stat.dict()}
-                    merged.append(MergedStatsModel(**merged_dict))
+                    merged.append(MergedStatsModel.parse_obj(merged_dict))
                     break
         return merged, error_stats
 

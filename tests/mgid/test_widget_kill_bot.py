@@ -4,7 +4,7 @@ import pytest
 from tests import handle_content
 
 from . import PLATFORM, TEST_CAMPAING_ID, log_resp
-from .test_widgets_turn_on_all import test_widgets_turn_on_all
+from .test_widgets_turn_on_all import widgets_turn_on_all
 
 COMMAND = 'widgets-kill-bot'
 
@@ -15,7 +15,7 @@ async def test_widgets_kill_bot_15d():
     RANGE = '15d'
     data = await handle_content(f'/{PLATFORM} {COMMAND} {TEST_CAMPAING_ID} {THRESHOLD} {RANGE}')
     assert log_resp(data, f'{COMMAND}_{THRESHOLD}_{RANGE}.txt')
-    await test_widgets_turn_on_all(TEST_CAMPAING_ID)
+    await widgets_turn_on_all(TEST_CAMPAING_ID)
     # assert len(data) != 0
 
 
@@ -25,7 +25,7 @@ async def test_widgets_kill_bot_30d():
     RANGE = '30d'
     data = await handle_content(f'/{PLATFORM} {COMMAND} {TEST_CAMPAING_ID} {THRESHOLD} {RANGE}')
     assert log_resp(data, f'{COMMAND}_{THRESHOLD}_{RANGE}.txt')
-    await test_widgets_turn_on_all(TEST_CAMPAING_ID)
+    await widgets_turn_on_all(TEST_CAMPAING_ID)
     # assert len(data) != 0
 
 
@@ -35,5 +35,5 @@ async def test_widgets_kill_bot_60d():
     RANGE = '60d'
     data = await handle_content(f'/{PLATFORM} {COMMAND} {TEST_CAMPAING_ID} {THRESHOLD} {RANGE}')
     assert log_resp(data, f'{COMMAND}_{THRESHOLD}_{RANGE}.txt')
-    await test_widgets_turn_on_all(TEST_CAMPAING_ID)
+    await widgets_turn_on_all(TEST_CAMPAING_ID)
     # assert len(data) != 0

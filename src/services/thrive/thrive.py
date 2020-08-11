@@ -1,17 +1,17 @@
 # import os
-from logger import logger
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 
-from utils import (alias_param, append_url_params, filter_result_by_fields,
-                   update_url_params)
+from logger import logger
+from utils import alias_param, append_url_params, update_url_params
 
 from ..common import CommonService
-from ..common.utils import add_interval_startend_dates
+from ..common.utils import add_interval_startend_dates, filter_result_by_fields
 from . import urls
 from .config import WIDGET_KEYS_MAPPER
-from .schemas import (
-    CampaignGeneralInfo, CampaignGETResponse, CampaignNameID, CampaignStats,
-    Source, SourceGETResponse, WidgetStats, WidgetStatsGETResponse)
+from .schemas import (CampaignExtendedInfoStats, CampaignGeneralInfo,
+                      CampaignGETResponse, CampaignNameID, CampaignStats,
+                      Source, SourceGETResponse, WidgetStats,
+                      WidgetStatsGETResponse)
 from .utils import fix_date_interval_value, subids_to_uids
 
 
@@ -46,7 +46,7 @@ class Thrive(CommonService):
 
     def list_campaigns(self,
                        search: str = None,
-                       fields: List[Union['name', 'id', 'source']] = ['name', 'id', 'source'],
+                       fields: List[Literal['name', 'id', 'source']] = ['name', 'id', 'source'],
                        **kwargs) -> list:
         url = urls.CAMPAIGNS.LIST_CAMPAIGNS
         if search:
@@ -62,8 +62,8 @@ class Thrive(CommonService):
                      camps: Optional[bool] = True,
                      all: Optional[bool] = True,
                      back: Optional[bool] = None,
-                     fields: List[Union['name', 'id', 'campCount']] = ['name', 'id', 'campCount'],
-                     **kwargs) -> list:
+                     fields: List[Literal['name', 'id', 'campCount']] = ['name', 'id', 'campCount'],
+                     **kwargs) -> List[Source]:
         url = urls.CAMPAIGNS.LIST_SOURCES
         if search:
             url = update_url_params(url, {'search': search})
@@ -97,7 +97,7 @@ class Thrive(CommonService):
                         interval: str = '1d',
                         fields: List[str] = ['name', 'id', 'clicks', 'thrive_clicks',
                                              'cost', 'conv', 'ctr', 'roi', 'rev', 'profit', 'cpa'],
-                        **kwargs) -> List['CampaignExtendedInfoStats.dict']:
+                        **kwargs) -> List[CampaignExtendedInfoStats]:
         url = urls.CAMPAIGNS.CAMPAIGN_STATS
         if campaign_id:
             url = update_url_params(url, {'camps': campaign_id})

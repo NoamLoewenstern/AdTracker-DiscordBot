@@ -20,6 +20,7 @@ class Commands(str, Enum):
     # list_sources = 'sources'
     spent_campaign = 'spent'
     widgets_top = 'widgets-top'
+    widgets_stats = 'widgets-stats'
     widgets_high_cpa = 'widgets-high-cpa'
     widgets_low_cpa = 'widgets-low-cpa'
     widgets_kill_longtail = 'widgets-kill-longtail'
@@ -33,6 +34,7 @@ COMMANDS_PATTERNS = [
     re_patterns.Commands.BOT_TRAFFIC,
     # re_patterns.Commands.LIST_SORCES,
     re_patterns.Commands.SPENT_CAMPAIGN,
+    re_patterns.Commands.WIDGETS_STATS,
     re_patterns.Commands.WIDGETS_TOP,
     re_patterns.Commands.WIDGETS_HIGH_CPA,
     re_patterns.Commands.WIDGETS_LOW_CPA,
@@ -56,6 +58,7 @@ class CommandParser:
                 Commands.stats_campaign: self.mgid.stats_campaign,
                 Commands.spent_campaign: self.mgid.spent_campaign,
                 Commands.campaign_bot_traffic: self.mgid.campaign_bot_traffic,
+                Commands.widgets_stats: self.mgid.widgets_stats,
                 Commands.widgets_top: self.mgid.widgets_top,
                 Commands.widgets_high_cpa: self.mgid.widgets_high_cpa,
                 Commands.widgets_low_cpa: self.mgid.widgets_low_cpa,
@@ -68,6 +71,7 @@ class CommandParser:
                 Commands.stats_campaign: self.zeropark.stats_campaign,
                 Commands.spent_campaign: self.zeropark.spent_campaign,
                 # Commands.campaign_bot_traffic: self.zeropark.campaign_bot_traffic,
+                Commands.widgets_stats: self.zeropark.widgets_stats,
                 Commands.widgets_top: self.zeropark.widgets_top,
                 Commands.widgets_high_cpa: self.zeropark.widgets_high_cpa,
                 Commands.widgets_low_cpa: self.zeropark.widgets_low_cpa,
@@ -117,17 +121,21 @@ class CommandParser:
         for group_name, default_value in [
             ('campaign_id', None),
             ('time_interval', DEFAULT_TIME_INTERVAL),
+            ('widget_id', None),
         ]:
             command_args[group_name] = group_dict.get(group_name) or default_value
         # if passed 'all' for campaign_id -> for all campaigns
         if (command_args.get('campaign_id') or '').lower() == DEFAULT_ALL_CAMPAIGNS_ALIAS:
             command_args['campaign_id'] = None
+        if (command_args.get('widget_id') or '').lower() == DEFAULT_ALL_CAMPAIGNS_ALIAS:
+            command_args['widget_id'] = None
         # optional flags:
         for pattern in [
             re_patterns.Flags.DATE_RANGE,
             re_patterns.Flags.TIME_RANGE,
             re_patterns.Flags.FILTER_LIMIT,
             re_patterns.Flags.IGNORE_ERRORS,
+            re_patterns.Flags.FIELDS_OPTIONS,
         ]:
             if (match := pattern.search(message)):
                 arg_name, value = list(match.groupdict().items())[0]

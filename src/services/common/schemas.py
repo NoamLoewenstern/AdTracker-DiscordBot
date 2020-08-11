@@ -12,8 +12,12 @@ class BaseModelSubscriptable(BaseModel):
     def __setitem__(self, key, value):
         return setattr(self, key, value)
 
+    def __delitem__(self, key):
+        return self.__delattr__(key)
+
     def __contains__(self, item):
         return hasattr(self, item)
+
 
     @classmethod
     def parse_obj(cls: Type['Model'], obj: Any) -> 'Model':

@@ -1,25 +1,28 @@
 import json
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
+
+from pydantic.main import BaseModel
 
 from config import MAX_URL_PARAMS_SIZE
 from constants import DEBUG
-from errors import (APIError, ErrorList, InvalidCampaignIdError,
-                    InvalidEmailPasswordError, InvalidPlatormCampaignNameError)
+from errors import APIError, ErrorList, InvalidEmailPasswordError
 from errors.platforms import CampaignNameMissingTrackerIDError
 # import os
 from logger import logger
 # from services.thrive import Thrive
-from utils import (DictForcedStringKeys, alias_param, append_url_params,
-                   chunks, filter_result_by_fields, operator_factory,
+from utils import (OPERATORS_MAP, alias_param, append_url_params, chunks,
                    update_url_params)
 
 from ..common.platform import PlatformService
-from ..common.utils import add_interval_startend_dates
+from ..common.schemas import BaseModel
+from ..common.utils import (add_interval_startend_dates, fields_list_hook,
+                            filter_result_by_fields)
 # from ..thrive.schemas import CampaignExtendedInfoStats
 from . import urls
 from .parameter_enums import DateIntervalParams
 from .schemas import (CampaignBaseData, CampaignData, CampaignGETResponse,
                       CampaignStat, CampaignStatDayDetailsGETResponse,
+                      CampaignStatDayDetailsSummary,
                       CampaignStatsBySiteGETResponse, MergedWithThriveStats,
                       StatsAllCampaignGETResponse, WidgetSourceStats,
                       WidgetStats)
@@ -45,6 +48,7 @@ class MGid(PlatformService):
                              lambda url: add_token_to_url(url, token),
                              lambda url: update_client_id_in_url(url, client_id)
                          ],
+                         platform='MGID',
                          *args, **kwargs)
 
     @property
@@ -63,12 +67,13 @@ class MGid(PlatformService):
             camp['name'] = self.campaigns[camp['id']]['name']
         return campaigns
 
+    @fields_list_hook(CampaignData)
     def list_campaigns(self,
                        limit: int = None,
                        start: int = None,
                        campaign_id: int = None,
                        fields: List[str] = ['name', 'id'],
-                       **kwargs) -> list:
+                       **kwargs) -> List[CampaignData]:
         url = urls.CAMPAIGNS.LIST
         if campaign_id is not None:
             url = urls.CAMPAIGNS.LIST + '/' + str(campaign_id)
@@ -88,6 +93,7 @@ class MGid(PlatformService):
         result = filter_result_by_fields(campaigns, fields)
         return result
 
+    @fields_list_hook(CampaignStatDayDetailsSummary)
     def stats_day_details(self,
                           campaign_id: int,
                           date: str,
@@ -105,6 +111,7 @@ class MGid(PlatformService):
         return result
 
     @adjust_dateInterval_params
+    @fields_list_hook(CampaignStat)
     def stats_campaign_pure_platform(self,
                                      campaign_id: str = None,
                                      dateInterval: DateIntervalParams = 'today',
@@ -125,13 +132,14 @@ class MGid(PlatformService):
             result = [stat.dict() for stat in result]
         return result
 
+    @fields_list_hook(MergedWithThriveStats)
     def stats_campaign(self, *,
                        campaign_id: str = None,
                        fields: Optional[List[str]] = ['id', 'name', 'platform_clicks', 'cost', 'conv',
                                                       'cpa', 'roi', 'revenue', 'profit', 'target_type'],  # CampaignStat
                        # revenue <- rev, profit'],  # MergedWithThriveStats
                        raise_=not DEBUG,
-                       **kwargs) -> Tuple[List['MergedWithThriveStats.dict'], ErrorList]:
+                       **kwargs) -> Tuple[MergedWithThriveStats, ErrorList]:
         stats = self.stats_campaign_pure_platform(campaign_id=campaign_id, as_json=False, **kwargs)
         if campaign_id:
             try:
@@ -146,6 +154,7 @@ class MGid(PlatformService):
         result = filter_result_by_fields(merged_stats, fields)
         return result, error_stats
 
+    @fields_list_hook(CampaignStat)
     def spent_campaign(self, *,
                        campaign_id: str = None,
                        min_spent=0.0001,
@@ -156,6 +165,7 @@ class MGid(PlatformService):
         result = filter_result_by_fields(filtered_by_spent, fields)
         return result
 
+    @fields_list_hook(CampaignStat, ['thrive_clicks', 'platform_clicks'])
     def campaign_bot_traffic(self, *,
                              campaign_id: str = None,
                              fields: List[str] = ['name', 'id', 'thrive_clicks', 'platform_clicks'],
@@ -183,6 +193,7 @@ class MGid(PlatformService):
         return result
 
     @adjust_dateInterval_params
+    @fields_list_hook(WidgetStats)
     def widgets_stats(self, *,
                       campaign_id: str,
                       widget_id: str = None,
@@ -219,15 +230,17 @@ class MGid(PlatformService):
         result = filter_result_by_fields(filtered_widgets, fields)
         return result
 
+    @fields_list_hook(WidgetStats)
     def widgets_top(self, filter_limit: int = 5, **kwargs) -> List[WidgetStats]:
         """
         Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
         """
         return self.widgets_stats(filter_limit=filter_limit, **kwargs)
 
+    @fields_list_hook(WidgetStats)
     def widgets_filter_cpa(self, *,
                            threshold: float,
-                           operator: Union['eq', 'ne', 'lt', 'gt', 'le', 'ge'] = 'le',
+                           operator: Literal['eq', 'ne', 'lt', 'gt', 'le', 'ge'] = 'le',
                            fields: List[str] = ['id', 'spent', 'conversions', 'cpa'],
                            **kwargs,
                            ) -> List[WidgetStats]:
@@ -239,13 +252,15 @@ class MGid(PlatformService):
         filtered_by_conversions = [stat for stat in widgets_stats if stat['conversions'] > 0]
         filtered_by_cpa = [stat for stat in filtered_by_conversions
                            # the operator is used here:
-                           if getattr(stat['cpa'], operator_factory[operator])(float(threshold))]
+                           if getattr(stat['cpa'], OPERATORS_MAP[operator])(float(threshold))]
         result = filter_result_by_fields(filtered_by_cpa, fields)
         return result
 
+    @fields_list_hook(WidgetStats)
     def widgets_high_cpa(self, **kwargs) -> List[WidgetStats]:
         return self.widgets_filter_cpa(operator='ge', **kwargs)
 
+    @fields_list_hook(WidgetStats)
     def widgets_low_cpa(self, **kwargs) -> List[WidgetStats]:
         return self.widgets_filter_cpa(operator='le', **kwargs)
 
@@ -359,9 +374,9 @@ class MGid(PlatformService):
 
         just_in_platform = widgets_ids - tracker_widgets_ids
         just_in_tracker = tracker_widgets_ids - widgets_ids
-        logger.info('[MGID] [widget_kill_bot_traffic] Platform Widgets & Tracker Widgets Differences: '
-                    #   f'len(just_in_platform):{len(just_in_platform)}\nlen(just_in_tracker):{len(just_in_tracker)}')
-                    f'{just_in_platform=}\n{just_in_tracker=}')
+        # logger.info('[MGID] [widget_kill_bot_traffic] Platform Widgets & Tracker Widgets Differences: '
+        #             #   f'len(just_in_platform):{len(just_in_platform)}\nlen(just_in_tracker):{len(just_in_tracker)}')
+        #             f'{just_in_platform=}\n{just_in_tracker=}')
 
         merged_widget_data = self._merge_and_update_list_objects(
             tracker_widgets_dict,

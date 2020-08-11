@@ -7,10 +7,13 @@ date_interval = r'(?: ?(?P<time_interval>\d+[dwmy]))'  # 1d | 3d | 7d
 date_interval_string = r'(?: ?(?P<time_interval>\w+?))'  # today | yesterday
 date_interval_combined = r'(?: ?(?P<time_interval>\d{1,6}[dwmy]|[a-z]+))'
 uuid4hex = r'(?:[a-f0-9]{8}(?:-?[a-f0-9]{4}){3}-?[a-f0-9]{12})'
-campaign_id = rf'(?: (?P<campaign_id>(?:\d|{uuid4hex}|{DEFAULT_ALL_CAMPAIGNS_ALIAS})+(?!\w)))'
+campaign_id = rf'(?: (?P<campaign_id>(?:\d+|{uuid4hex}|{DEFAULT_ALL_CAMPAIGNS_ALIAS})(?!\w)))'
 filter_limit = r'(?: (?P<filter_limit>\d+(?!\w)))'
 threshold = r'(?: (?P<threshold>\d+(?:\.\d+)?(?!\w)))'
 ignore_errors_keyname = 'ignore_errors'
+GET_FIELDS_OPTIONS_KEYNAME = 'get_fields_options'
+FIELDS_OPTIONS_FLAG = 'list-fields'
+widget_id = rf'(?: (?P<widget_id>(?:{DEFAULT_ALL_CAMPAIGNS_ALIAS}|[\w-]+)(?!\w)))'
 
 
 class Commands:
@@ -30,6 +33,12 @@ class Commands:
                              + f'{campaign_id}?'
                              + f'{date_interval_combined}?',
                              re.IGNORECASE)
+    WIDGETS_STATS = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>widgets-stats)'
+                               + f'{campaign_id}'
+                               + f'{widget_id}?'
+                               + f'{filter_limit}?'
+                               + f'{date_interval_combined}?',
+                               re.IGNORECASE)
     WIDGETS_TOP = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>widgets-top)'
                              + f'{campaign_id}'
                              + f'{filter_limit}?'
@@ -68,8 +77,10 @@ class Flags:
     TIME_RANGE = re.compile(rf' {PREFIX_FLAG}(?:time|time_range|date_interval)[: =]'
                             + f'{date_interval_combined}', re.IGNORECASE)
     FILTER_LIMIT = re.compile(rf' {PREFIX_FLAG}limit[: =]{filter_limit}', re.IGNORECASE)
-    IGNORE_ERRORS = re.compile(
-        rf' {PREFIX_FLAG}(?P<{ignore_errors_keyname}>ie|ignore(?:[-_]errors)?)', re.IGNORECASE)
+    IGNORE_ERRORS = re.compile(rf' {PREFIX_FLAG}(?P<{ignore_errors_keyname}>ie|ignore(?:[-_]errors)?)',
+                               re.IGNORECASE)
+    FIELDS_OPTIONS = re.compile(rf' {PREFIX_FLAG}(?P<{GET_FIELDS_OPTIONS_KEYNAME}>{FIELDS_OPTIONS_FLAG})',
+                                re.IGNORECASE)
 
 
 NON_BASE_DATE_INTERVAL_RE = re.compile('([2-689]|[12][0-9])d', re.IGNORECASE)

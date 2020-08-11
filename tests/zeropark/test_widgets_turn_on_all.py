@@ -5,7 +5,7 @@ from tests import handle_content
 
 from . import PLATFORM, log_resp
 
-TEST_CAMPAING_ID = 'ba9b59f0-7b43-11ea-9558-0a06ea97c507'
+TEST_CAMPAING_ID = 'e556d672-d6f0-11ea-9f7c-12e5dcaa70ed'
 COMMAND = 'widgets-turn-on-all'
 
 

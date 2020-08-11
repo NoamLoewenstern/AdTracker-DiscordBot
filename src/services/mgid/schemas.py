@@ -4,7 +4,6 @@ from typing import Dict, List, Optional, Union
 from pydantic import Field, validator
 
 from errors import InvalidPlatormCampaignNameError
-from services.thrive.schemas import CampaignExtendedInfoStats
 
 from ..common.common_service import TargetType
 from ..common.platform import get_thrive_id_from_camp
