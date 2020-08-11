@@ -126,11 +126,11 @@ class ZeroPark(PlatformService):
         result = filter_result_by_fields(merged_stats, fields)
         return result, error_stats
 
-    @fields_list_hook(MergedWithThriveStats)
+    @fields_list_hook(ExtendedStats)
     def spent_campaign(self, *,
                        min_spent=0.0001,
                        fields: List[str] = ['name', 'id', 'spent'],
-                       **kwargs) -> List[MergedWithThriveStats]:
+                       **kwargs) -> List[ExtendedStats]:
         kwargs.update({'fields': fields})
         stats = self.stats_campaign_pure_platform(**kwargs)
         filtered_by_spent = [stat for stat in stats if stat['spent'] >= min_spent]
