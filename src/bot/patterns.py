@@ -71,7 +71,7 @@ class Commands:
 class Flags:
     PREFIX_FLAG = '(?:--|/)'
     OUTPUT_FORMAT = re.compile(rf' {PREFIX_FLAG}output[: =](?P<output_format>\w+)', re.IGNORECASE)
-    FILTER_FIELDS = re.compile(rf' {PREFIX_FLAG}fields[: =](?P<fields>[a-z]+(?:,[a-z]*)*)', re.IGNORECASE)
+    FILTER_FIELDS = re.compile(rf' {PREFIX_FLAG}fields[: =](?P<fields>\w+(?:,\w*)*)', re.IGNORECASE)
     DATE_RANGE = re.compile(rf' {PREFIX_FLAG}(?:date|date_range)[: =]'
                             + rf'(?P<date_range>{date}(?:-{date})?)', re.IGNORECASE)
     TIME_RANGE = re.compile(rf' {PREFIX_FLAG}(?:time|time_range|date_interval)[: =]'
