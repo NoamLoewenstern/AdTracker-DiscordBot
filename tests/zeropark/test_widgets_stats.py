@@ -12,7 +12,21 @@ WIDGET_ID = 'xray-pix-xeowVSpG'
 
 
 @pytest.mark.asyncio
-async def test_test_widget_stats_non_existing():
+async def test_widgets_stats_help():
+    data = await handle_content(f'/{PLATFORM} {COMMAND} -h')
+    assert log_resp(data, f'{COMMAND}_help.txt')
+    assert data.startswith('usage')
+
+
+@pytest.mark.asyncio
+async def test_widgets_stats_help_id():
+    data = await handle_content(f'/{PLATFORM} {COMMAND} {TEST_CAMPAING_ID} -h')
+    assert log_resp(data, f'{COMMAND}_help_id.txt')
+    assert data.startswith('usage')
+
+
+@pytest.mark.asyncio
+async def test_widgets_stats_non_existing():
     data = await handle_content(f'/{PLATFORM} {COMMAND} {TEST_CAMPAING_ID} 2d')
     log_resp(data, f'{COMMAND}_non_existing.txt')
     assert 'No Such Widget Exists' in data

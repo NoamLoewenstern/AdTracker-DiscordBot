@@ -1,7 +1,6 @@
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
-
-from config import MAX_URL_PARAMS_SIZE
+from config import DEFAULT_FILTER_NUMBER, MAX_URL_PARAMS_SIZE
 from constants import DEBUG
 from errors import APIError, ErrorList
 from errors.platforms import CampaignNameMissingTrackerIDError
@@ -246,11 +245,13 @@ class ZeroPark(PlatformService):
         result = filter_result_by_fields(filtered_sites, fields)
         return result
 
-    def widgets_top(self, **kwargs) -> List[TargetStatsMergedData]:
+    def widgets_top(self, filter_limit: int = '',**kwargs) -> List[TargetStatsMergedData]:
         """
         Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
         """
-        return self.widgets_stats(**kwargs)
+        if not filter_limit:
+            filter_limit = DEFAULT_FILTER_NUMBER
+        return self.widgets_stats(filter_limit=filter_limit, **kwargs)
 
     @fields_list_hook(TargetStatsMergedData)
     def widgets_filter_cpa(self, *,
