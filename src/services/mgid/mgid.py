@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 
 from pydantic.main import BaseModel
 
-from config import MAX_URL_PARAMS_SIZE
+from config import DEFAULT_FILTER_NUMBER, MAX_URL_PARAMS_SIZE
 from constants import DEBUG
 from errors import APIError, ErrorList, InvalidEmailPasswordError
 from errors.platforms import CampaignNameMissingTrackerIDError
@@ -238,10 +238,12 @@ class MGid(PlatformService):
         return result
 
     @fields_list_hook(WidgetStats)
-    def widgets_top(self, filter_limit: int = 5, **kwargs) -> List[WidgetStats]:
+    def widgets_top(self, filter_limit: int = '', **kwargs) -> List[WidgetStats]:
         """
         Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
         """
+        if not filter_limit:
+            filter_limit = DEFAULT_FILTER_NUMBER
         return self.widgets_stats(filter_limit=filter_limit, **kwargs)
 
     @fields_list_hook(WidgetStats)
@@ -285,7 +287,8 @@ class MGid(PlatformService):
     def _widgets_init_filter_to_blacklist(self, campaign_id: str) -> None:
         """ if is already blacklist ('except') - method does nothing """
         # CLEANING CURRENT FILTER ON WIDGETS IF IS NOT BLACKLIST
-        camps_stats = self.list_campaigns(campaign_id=campaign_id, fields=['widgetsFilterUid'], case_sensitive=True)
+        camps_stats = self.list_campaigns(campaign_id=campaign_id, fields=[
+                                          'widgetsFilterUid'], case_sensitive=True)
         cur_filterType = camps_stats[0]['widgetsFilterUid']['filterType'].lower()
         if cur_filterType == 'only':
             self.widgets_turn_on_all(campaign_id=campaign_id)
