@@ -93,7 +93,7 @@ class CommandParser:
     def parse_command(self, message: str) -> Tuple[Callable, Dict[str, Union[str, List[str]]]]:
         command_args = {}
         for pattern in COMMANDS_PATTERNS:
-            match = pattern.match(message.lower())
+            match = pattern.match(message)
             if match:
                 break
         else:
