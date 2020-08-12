@@ -13,10 +13,10 @@ from .parser import ArgumentParser
 
 
 class ArgsDoc(str, Enum):
-    campaign_id = f"'{DEFAULT_ALL_CAMPAIGNS_ALIAS}' for All Campaigns (default to {DEFAULT_ALL_CAMPAIGNS_ALIAS} if no value passed)"
-    widget_id = f"'{DEFAULT_ALL_CAMPAIGNS_ALIAS}' for All Widgets (default to {DEFAULT_ALL_CAMPAIGNS_ALIAS} if no value passed)"
-    time_interval = '(int)d'
-    filter_limit = '(int)'
+    campaign_id = f"(default is '{DEFAULT_ALL_CAMPAIGNS_ALIAS}')"
+    widget_id = f"(default is '{DEFAULT_ALL_CAMPAIGNS_ALIAS}')"
+    time_interval = '(int)d (use as FLAG. e.g /time_interval:20d) (alias: /time)'
+    filter_limit = '(int) (use as FLAG as e.g /filter_limit:20) (alias: /filter)'
     threshold = '(int|float)'
 
 
@@ -71,8 +71,8 @@ class CommandHelpDocumentation:
                                           help=ArgsDoc.time_interval.value)
 
         widgets_stats = subparser.add_parser(Commands.widgets_stats.value,
-                                           help="List Campaign's Widgets STATS")
-        widgets_stats.add_argument(ArgsDoc.campaign_id.name)
+                                             help="List Campaign's Widgets STATS")
+        widgets_stats.add_argument(ArgsDoc.campaign_id.name, help=ArgsDoc.campaign_id.value)
         widgets_stats.add_argument(ArgsDoc.widget_id.name, nargs='?', help=ArgsDoc.widget_id.value)
         widgets_stats.add_argument(ArgsDoc.filter_limit.name, nargs='?', help=ArgsDoc.filter_limit.value)
         widgets_stats.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
