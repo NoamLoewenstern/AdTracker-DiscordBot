@@ -4,7 +4,7 @@ from enum import Enum
 from typing import List
 
 from bot.controllers.command import Commands
-from config import DEFAULT_ALL_CAMPAIGNS_ALIAS
+from config import DEFAULT_ALL_CAMPAIGNS_ALIAS, DEFAULT_TIME_INTERVAL
 from constants import Platforms
 from errors import MyArgparseArgumentError, NotExpectedErrorParsingError
 
@@ -13,10 +13,10 @@ from .parser import ArgumentParser
 
 
 class ArgsDoc(str, Enum):
-    campaign_id = f"(default is '{DEFAULT_ALL_CAMPAIGNS_ALIAS}')"
-    widget_id = f"(default is '{DEFAULT_ALL_CAMPAIGNS_ALIAS}')"
-    time_interval = '(int)d (use as FLAG. e.g /time_interval:20d) (alias: /time)'
-    filter_limit = '(int) (use as FLAG as e.g /filter_limit:20) (alias: /filter)'
+    campaign_id = f"(default: '{DEFAULT_ALL_CAMPAIGNS_ALIAS}')"
+    widget_id = f"(default: '{DEFAULT_ALL_CAMPAIGNS_ALIAS}')"
+    time_interval = f'(int)d (default: {DEFAULT_TIME_INTERVAL}) (use as FLAG, e.g /time_interval:20d) (alias: /time)'
+    filter_limit = '(int) (default: all) (use as FLAG, e.g /filter_limit:20) (alias: /filter)'
     threshold = '(int|float)'
 
 
