@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
-from pydantic.errors import ListError
 
 from config import MAX_URL_PARAMS_SIZE
 from constants import DEBUG
@@ -67,9 +66,10 @@ class ZeroPark(PlatformService):
     @fields_list_hook(ExtendedStats)
     def list_campaigns(self,
                        fields: Optional[List[str]] = ['id', 'name'],
+                       case_sensitive=False,
                        **kwargs) -> list:
         stats = self.stats_campaign_pure_platform(**kwargs)
-        stats = filter_result_by_fields(stats, fields)
+        stats = filter_result_by_fields(stats, fields, case_sensitive=case_sensitive)
         return stats
 
     @fields_list_hook(ExtendedStats)
@@ -106,7 +106,7 @@ class ZeroPark(PlatformService):
                        fields: Optional[List[str]] = ['id', 'name', 'platform_clicks', 'cost', 'conv',
                                                       'cpa', 'roi', 'revenue', 'profit', 'redirects', 'target_type'],
                        raise_=not DEBUG,
-                       **kwargs) -> Tuple[List[ExtendedStats], ListError]:
+                       **kwargs) -> Tuple[List[ExtendedStats], ErrorList]:
         kwargs.update({
             'campaignNameOrId': campaignNameOrId,
             'as_json': False,
@@ -174,13 +174,35 @@ class ZeroPark(PlatformService):
             })
         return result, error_stats
 
+    @adjust_interval_params
+    def _widget_exists(self, *,
+                       campaignNameOrId: str,
+                       widget_name: str,
+                       interval: str,
+                       startDate: str,
+                       endDate: str,
+                       **kwargs) -> bool:
+        url = urls.WIDGETS.LIST.format(campaign_id=campaignNameOrId)
+        url = update_url_params(url, {'campaignId': campaignNameOrId,
+                                      'interval': interval,
+                                      'startDate': startDate,
+                                      'endDate': endDate,
+                                      'targetAddresses': widget_name,
+                                      })
+
+        resp = self.get(url).json()
+        resp_model = TargetStatsByCampaignResponse.parse_obj(resp)
+        if not resp_model.elements:
+            return False
+        return True
+
     @fields_list_hook(TargetStatsMergedData)
     @alias_param_campaignNameOrId
     @alias_param_widget_name
     @adjust_interval_params
     def widgets_stats(self, *,
                       campaignNameOrId: str,
-                      interval: str = "TODAY",
+                      interval: str = 'TODAY',
                       widget_name: str = None,
                       filter_limit: int = '',
                       sort_key: str = 'CONVERSIONS',
@@ -205,6 +227,15 @@ class ZeroPark(PlatformService):
 
         resp = self.get(url).json()
         resp_model = TargetStatsByCampaignResponse.parse_obj(resp)
+        # Checking if Given WidgetID Exists:
+        if widget_name is not None and not resp_model.elements \
+                and not self._widget_exists(
+                    time_interval=kwargs['time_interval'],
+                    campaignNameOrId=campaignNameOrId,
+                    widget_name=widget_name,
+                ):
+            return [], ErrorList([f"No Such Widget Exists: '{widget_name}'"])
+
         merged_widget_data = [TargetStatsMergedData(**widget_data.dict(include={'id', 'target',
                                                                                 'source', 'sourceId',
                                                                                 'trafficSourceType', 'state'}),

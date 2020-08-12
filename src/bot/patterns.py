@@ -74,7 +74,7 @@ class Flags:
     FILTER_FIELDS = re.compile(rf' {PREFIX_FLAG}fields[: =](?P<fields>\w+(?:,\w*)*)', re.IGNORECASE)
     DATE_RANGE = re.compile(rf' {PREFIX_FLAG}(?:date|date_range)[: =]'
                             + rf'(?P<date_range>{date}(?:-{date})?)', re.IGNORECASE)
-    TIME_RANGE = re.compile(rf' {PREFIX_FLAG}(?:time|time_range|date_interval)[: =]'
+    TIME_RANGE = re.compile(rf' {PREFIX_FLAG}(?:time|time_range|time_interval|date_interval)[: =]'
                             + f'{date_interval_combined}', re.IGNORECASE)
     FILTER_LIMIT = re.compile(rf' {PREFIX_FLAG}limit[: =]{filter_limit}', re.IGNORECASE)
     IGNORE_ERRORS = re.compile(rf' {PREFIX_FLAG}(?P<{ignore_errors_keyname}>ie|ignore(?:[-_]errors)?)',

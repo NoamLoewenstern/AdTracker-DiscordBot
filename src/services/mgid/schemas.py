@@ -13,7 +13,7 @@ from ..common.schemas import BaseModel
 class CampaignBaseData(BaseModel):
     id: int = Field(None, alias='campaignId')
     campaignId: int = None
-    name: str = None
+    name: str = ''
 
     @property
     def target_type(self) -> str:
@@ -78,7 +78,7 @@ class CampaignStatus(BaseModel):
 
 class CampaignData(CampaignBaseData):
     id: int = None
-    name: str = None
+    name: str = ''
     language: int = None
     status: CampaignStatus = None
     domainsFilter: DomainsFilter = None

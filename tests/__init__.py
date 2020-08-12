@@ -11,4 +11,4 @@ async def handle_content(command: str) -> str:
     full_resp = main_resp
     if main_error_resp:
         full_resp += f'\n\nERRORS:\n{main_error_resp}'
-    return full_resp
+    return full_resp.strip()

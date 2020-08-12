@@ -89,7 +89,6 @@ def format_error_resp(list_error_resp: Union[str, List[Union[str, Dict[str, str]
 
 
 async def handle_content(command: str) -> Tuple[str]:
-    command = command.lower()
     try:
 
         is_valid_command, args = helper_docs.parse_command(command)

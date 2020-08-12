@@ -3,12 +3,13 @@ import pytest
 
 from bot.patterns import FIELDS_OPTIONS_FLAG
 from tests import handle_content
+from tests.zeropark.test_widgets_stats import WIDGET_ID
 
 from . import PLATFORM, log_resp
 
-TEST_CAMPAING_ID = 'e556d672-d6f0-11ea-9f7c-12e5dcaa70ed'
+TEST_CAMPAING_ID = 1023198
+WIDGET_ID = 5662589
 COMMAND = 'widgets-stats'
-WIDGET_ID = 'xray-pix-xeowVSpG'
 
 
 @pytest.mark.asyncio

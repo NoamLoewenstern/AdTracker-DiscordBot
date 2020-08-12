@@ -73,6 +73,7 @@ class MGid(PlatformService):
                        start: int = None,
                        campaign_id: int = None,
                        fields: List[str] = ['name', 'id'],
+                       case_sensitive=False,
                        **kwargs) -> List[CampaignData]:
         url = urls.CAMPAIGNS.LIST
         if campaign_id is not None:
@@ -90,7 +91,7 @@ class MGid(PlatformService):
             campaigns = resp_model.__root__.values()
             campaigns = [camp for camp in campaigns]
             self._update_campaigns(campaigns)
-        result = filter_result_by_fields(campaigns, fields)
+        result = filter_result_by_fields(campaigns, fields, case_sensitive=case_sensitive)
         return result
 
     @fields_list_hook(CampaignStatDayDetailsSummary)
@@ -192,8 +193,8 @@ class MGid(PlatformService):
         result = self.post(url, data={'email': self.email, 'password': self.password})
         return result
 
-    @adjust_dateInterval_params
     @fields_list_hook(WidgetStats)
+    @adjust_dateInterval_params
     def widgets_stats(self, *,
                       campaign_id: str,
                       widget_id: str = None,
@@ -225,9 +226,15 @@ class MGid(PlatformService):
                     widget_with_id = WidgetStats(id=site_id,
                                                  **cur_widget_stats.dict(exclude={'id'}))
                     widget_stats.append(widget_with_id)
+
         widget_stats.sort(key=lambda widget: widget[sort_key], reverse=True)
         filtered_widgets = widget_stats[:int(filter_limit)] if filter_limit else widget_stats
         result = filter_result_by_fields(filtered_widgets, fields)
+
+        # Checking if Given WidgetID Exists:
+        if widget_id is not None and widget_id.lower() not in [str(e['id']).lower() for e in result]:
+            return [], ErrorList([f"No Such Widget Exists: '{widget_id}'"])
+
         return result
 
     @fields_list_hook(WidgetStats)
@@ -278,7 +285,7 @@ class MGid(PlatformService):
     def _widgets_init_filter_to_blacklist(self, campaign_id: str) -> None:
         """ if is already blacklist ('except') - method does nothing """
         # CLEANING CURRENT FILTER ON WIDGETS IF IS NOT BLACKLIST
-        camps_stats = self.list_campaigns(campaign_id=campaign_id, fields=['widgetsFilterUid'])
+        camps_stats = self.list_campaigns(campaign_id=campaign_id, fields=['widgetsFilterUid'], case_sensitive=True)
         cur_filterType = camps_stats[0]['widgetsFilterUid']['filterType'].lower()
         if cur_filterType == 'only':
             self.widgets_turn_on_all(campaign_id=campaign_id)
