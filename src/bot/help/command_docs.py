@@ -4,7 +4,8 @@ from enum import Enum
 from typing import List
 
 from bot.controllers.command import Commands
-from config import DEFAULT_ALL_CAMPAIGNS_ALIAS, DEFAULT_TIME_INTERVAL
+from config import (DEFAULT_ALL_CAMPAIGNS_ALIAS,
+                    DEFAULT_CPA_THRESHOLD_INTERVAL, DEFAULT_TIME_INTERVAL)
 from constants import Platforms
 from errors import MyArgparseArgumentError, NotExpectedErrorParsingError
 
@@ -14,10 +15,24 @@ from .parser import ArgumentParser
 
 class ArgsDoc(str, Enum):
     campaign_id = f"(default: '{DEFAULT_ALL_CAMPAIGNS_ALIAS}')"
-    widget_id = f"(default: '{DEFAULT_ALL_CAMPAIGNS_ALIAS}')"
+    widget_id = f"(default: '{DEFAULT_ALL_CAMPAIGNS_ALIAS}') "
     time_interval = f'(int)d (default: {DEFAULT_TIME_INTERVAL}) (use as FLAG, e.g /time_interval:20d) (alias: /time)'
     filter_limit = '(int) (default: all) (use as FLAG, e.g /filter_limit:20) (alias: /filter)'
     threshold = '(int|float)'
+
+
+class CommandDoc(str, Enum):
+    list_campaigns = 'List Campaigns Basic INFO'
+    stats_campaign = 'List Campaigns STATS'
+    spent_campaign = 'List Campaigns SPENT Stats'
+    bot_traffic = 'List Campaigns BOT TRAFFIC'
+    widgets_stats = "List Campaign's Widgets STATS"
+    widgets_top = "List Campaign's TOP Widgets CONVERSIONS"
+    widgets_high_cpa = "List Campaign's Widgets with HIGH CPA"
+    widgets_low_cpa = "List Campaign's Widgets with LOW CPA"
+    widgets_kill_longtail = "PAUSE Campaign's Widgets Where SPENT Under {threshold}"
+    widgets_turn_on_all = "RESUME All Campaign's Widgets"
+    widget_kill_bot_traffic = "PAUSE Campaign's Widgets with {threshold} Percent BOT-TRAFFIC"
 
 
 class FlagsDoc(str, Enum):
@@ -50,62 +65,63 @@ class CommandHelpDocumentation:
         self.command_group_help = self.get_arg_group_help_formatter()
 
     def _add_commands_to_subparser(self, subparser):
-        list_campaigns = subparser.add_parser(Commands.list_campaigns.value, help='List Campaigns Basic INFO')
+        list_campaigns = subparser.add_parser(
+            Commands.list_campaigns.value, description=CommandDoc.list_campaigns, help=CommandDoc.list_campaigns)
         list_campaigns.add_argument(ArgsDoc.campaign_id.name, nargs='?', help=ArgsDoc.campaign_id.value)
 
-        stats_campaign = subparser.add_parser(Commands.stats_campaign.value, help='List Campaigns STATS')
+        stats_campaign = subparser.add_parser(
+            Commands.stats_campaign.value, description=CommandDoc.stats_campaign, help=CommandDoc.stats_campaign)
         stats_campaign.add_argument(ArgsDoc.campaign_id.name, nargs='?', help=ArgsDoc.campaign_id.value)
-        stats_campaign.add_argument(ArgsDoc.time_interval.name, nargs='?',
-                                    help=ArgsDoc.time_interval.value)
+        stats_campaign.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
-        spent_campaign = subparser.add_parser(Commands.spent_campaign.value,
-                                              help='List Campaigns SPENT Stats')
+        spent_campaign = subparser.add_parser(
+            Commands.spent_campaign.value, description=CommandDoc.spent_campaign, help=CommandDoc.spent_campaign)
         spent_campaign.add_argument(ArgsDoc.campaign_id.name, nargs='?', help=ArgsDoc.campaign_id.value)
-        spent_campaign.add_argument(ArgsDoc.time_interval.name, nargs='?',
-                                    help=ArgsDoc.time_interval.value)
+        spent_campaign.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
-        campaign_bot_traffic = subparser.add_parser(Commands.campaign_bot_traffic.value,
-                                                    help='List Campaigns BOT TRAFFIC')
+        campaign_bot_traffic = subparser.add_parser(
+            Commands.campaign_bot_traffic.value, description=CommandDoc.bot_traffic, help=CommandDoc.bot_traffic)
         campaign_bot_traffic.add_argument(ArgsDoc.campaign_id.name, nargs='?', help=ArgsDoc.campaign_id.value)
-        campaign_bot_traffic.add_argument(ArgsDoc.time_interval.name, nargs='?',
-                                          help=ArgsDoc.time_interval.value)
+        campaign_bot_traffic.add_argument(ArgsDoc.time_interval.name,
+                                          nargs='?', help=ArgsDoc.time_interval.value)
 
         widgets_stats = subparser.add_parser(Commands.widgets_stats.value,
-                                             help="List Campaign's Widgets STATS")
+                                             description=CommandDoc.widgets_stats, help=CommandDoc.widgets_stats)
         widgets_stats.add_argument(ArgsDoc.campaign_id.name, help=ArgsDoc.campaign_id.value)
         widgets_stats.add_argument(ArgsDoc.widget_id.name, nargs='?', help=ArgsDoc.widget_id.value)
         widgets_stats.add_argument(ArgsDoc.filter_limit.name, nargs='?', help=ArgsDoc.filter_limit.value)
         widgets_stats.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
         widgets_top = subparser.add_parser(Commands.widgets_top.value,
-                                           help="List Campaign's TOP Widgets CONVERSIONS")
+                                           description=CommandDoc.widgets_top, help=CommandDoc.widgets_top)
         widgets_top.add_argument(ArgsDoc.campaign_id.name)
         widgets_top.add_argument(ArgsDoc.filter_limit.name, nargs='?', help=ArgsDoc.filter_limit.value)
         widgets_top.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
-        widgets_high_cpa = subparser.add_parser(Commands.widgets_high_cpa.value,
-                                                help="List Campaign's Widgets with HIGH CPA")
+        widgets_high_cpa = subparser.add_parser(
+            Commands.widgets_high_cpa.value, description=CommandDoc.widgets_high_cpa, help=CommandDoc.widgets_high_cpa)
         widgets_high_cpa.add_argument(ArgsDoc.campaign_id.name)
         widgets_high_cpa.add_argument(ArgsDoc.threshold.name, help=ArgsDoc.threshold.value)
         widgets_high_cpa.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
-        widgets_low_cpa = subparser.add_parser(Commands.widgets_low_cpa.value,
-                                               help="List Campaign's Widgets with LOW CPA")
+        widgets_low_cpa = subparser.add_parser(
+            Commands.widgets_low_cpa.value, description=CommandDoc.widgets_low_cpa, help=CommandDoc.widgets_low_cpa)
         widgets_low_cpa.add_argument(ArgsDoc.campaign_id.name)
-        widgets_low_cpa.add_argument(ArgsDoc.threshold.name, help=ArgsDoc.threshold.value)
         widgets_low_cpa.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
+        widgets_low_cpa.add_argument(ArgsDoc.threshold.name, nargs='?', default=DEFAULT_CPA_THRESHOLD_INTERVAL,
+                                     help=ArgsDoc.threshold.value)
 
-        widgets_kill_longtail = subparser.add_parser(Commands.widgets_kill_longtail.value,
-                                                     help=r"PAUSE Campaign's Widgets Where SPENT Under {threshold}")
+        widgets_kill_longtail = subparser.add_parser(
+            Commands.widgets_kill_longtail.value, description=CommandDoc.widgets_kill_longtail, help=CommandDoc.widgets_kill_longtail)
         widgets_kill_longtail.add_argument(ArgsDoc.campaign_id.name)
         widgets_kill_longtail.add_argument(ArgsDoc.threshold.name, help=ArgsDoc.threshold.value)
 
-        widgets_turn_on_all = subparser.add_parser(Commands.widgets_turn_on_all.value,
-                                                   help="RESUME All Campaign's Widgets")
+        widgets_turn_on_all = subparser.add_parser(
+            Commands.widgets_turn_on_all.value, help=CommandDoc.widgets_turn_on_all, description=CommandDoc.widgets_turn_on_all)
         widgets_turn_on_all.add_argument(ArgsDoc.campaign_id.name)
 
-        widget_kill_bot_traffic = subparser.add_parser(Commands.widget_kill_bot_traffic.value,
-                                                       help=r"PAUSE Campaign's Widgets with {threshold} Percent BOT-TRAFFIC")
+        widget_kill_bot_traffic = subparser.add_parser(
+            Commands.widget_kill_bot_traffic.value, description=CommandDoc.widget_kill_bot_traffic, help=CommandDoc.widget_kill_bot_traffic)
         widget_kill_bot_traffic.add_argument(ArgsDoc.campaign_id.name)
         widget_kill_bot_traffic.add_argument(ArgsDoc.threshold.name, help=ArgsDoc.threshold.value)
         widget_kill_bot_traffic.add_argument(ArgsDoc.time_interval.name, help=ArgsDoc.time_interval.value)

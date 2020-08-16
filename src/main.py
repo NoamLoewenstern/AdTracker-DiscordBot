@@ -19,7 +19,8 @@ from errors.platforms import (CampaignNameMissingTrackerIDError,
                               InvalidCampaignIDError)
 from extensions import helper_docs
 from logger import logger
-from utils import groupify_list_strings
+from utils import (GENERAL_RESP_TYPE, convert_list_dicts_to_csv_file,
+                   groupify_list_strings)
 
 TOKEN = os.environ['DISCORD_TOKEN']
 GUILD = os.environ['DISCORD_GUILD']
@@ -116,20 +117,32 @@ async def handle_content(command: str) -> Tuple[str]:
         resp = ''
         error_resp = MESSAGE_HANDLER.format_response(internal_error.dict())
 
+    orig_resp, orig_error_resp = resp, error_resp
     resp, error_resp = format_resp(resp), format_error_resp(error_resp)
     if resp.strip() == '' and error_resp.strip() == '':
         resp = 'Empty Results for Given Command (Try Widening the Time-Interval for RequestedData)'
 
-    return resp, error_resp
+    return {
+        'resp': resp,
+        'error_resp': error_resp,
+        'orig_resp': orig_resp,
+        'orig_error_resp': orig_error_resp,
+    }
 
 
-async def send_msg(channel, msg: str) -> None:
+async def send_msg(channel, msg: str, orig_resp: GENERAL_RESP_TYPE) -> None:
+    try:
+        if len(msg) > MAX_NUMBER_LINES * 2:
+            csv_file = convert_list_dicts_to_csv_file(orig_resp)
+            return await channel.send(file=discord.File(str(csv_file)))
+    except:
+        pass
     if len(msg) > MAX_NUMBER_LINES:
         # sends resp in multiple messages if exceeds tha max chars per message.
         for block_resp in groupify_list_strings(msg.split('\n\n'), MAX_NUMBER_LINES, joiner='\n\n'):
             await channel.send(block_resp)
         return
-    await channel.send(msg)
+    return await channel.send(msg)
 
 
 @client.event
@@ -152,21 +165,26 @@ async def on_message(message):
     if not command.startswith('/'):  # ignore non-commands
         return
 
+    result = {}
     try:
-        resp, error_resp = await handle_content(command)
+        result = await handle_content(command)
+        if isinstance(result, tuple):
+            result = {
+                'resp': result[0],
+                'error_resp': result[1],
+                'orig_resp': result[0],
+                'orig_error_resp': result[1],
+            }
     except Exception as e:
         logger.error(e)
-        resp = ''
-        error_resp = MESSAGE_HANDLER.format_response(InternalError.dict())
+        result['resp'] = ''
+        result['error_resp'] = MESSAGE_HANDLER.format_response(InternalError.dict())
 
-    # resp = dumps(resp, indent=2) if isinstance(resp, (list, dict, tuple)) else resp
-    # error_resp = dumps(error_resp, indent=2) if isinstance(error_resp, (list, dict, tuple)) else resp
-    channel = message.channel
-    if resp:
-        await send_msg(channel, resp)
-    if error_resp:
+    if result['resp']:
+        await send_msg(message.channel, result['resp'], result['orig_resp'])
+    if result['error_resp']:
         sleep(0.5)
-        await send_msg(channel, '__*ERRORS:*__\n' + error_resp)
+        await send_msg(message.channel, '__*ERRORS:*__\n' + result['error_resp'], result['orig_error_resp'])
 
 
 if __name__ == '__main__':

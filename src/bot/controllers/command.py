@@ -1,10 +1,10 @@
 import json
 import re
 from enum import Enum
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from config import (DEFAULT_ALL_CAMPAIGNS_ALIAS, DEFAULT_OUTPUT_FORMAT,
-                    DEFAULT_TIME_INTERVAL)
+                    DEFAULT_CPA_THRESHOLD_INTERVAL, DEFAULT_TIME_INTERVAL)
 from constants import Platforms
 from errors import InvalidCommandError
 from logger import logger
@@ -43,6 +43,14 @@ COMMANDS_PATTERNS = [
     re_patterns.Commands.WIDGETS_KILL_BOT_TRAFFIC,
 ]
 
+class DefaultArgument:
+    def __init__(self, name: str,
+                 value: Optional[Any] = None,
+                 check: Optional[Callable[..., bool]] = lambda: True):
+        self.name = name
+        self.value = value
+        self.check = check
+
 
 class CommandParser:
     def __init__(self, mgid: MGid, zeropark: ZeroPark, thrive: Thrive):
@@ -52,7 +60,7 @@ class CommandParser:
 
     def get_platform_handler(self, platform: Union[Platforms],
                              command: Commands):
-        method_factory = {
+        method_map = {
             Platforms.MGID: {
                 Commands.list_campaigns: self.mgid.list_campaigns,
                 Commands.stats_campaign: self.mgid.stats_campaign,
@@ -85,10 +93,10 @@ class CommandParser:
                 Commands.stats_campaign: self.thrive.stats_campaigns,
             },
         }
-        method_factory[Platforms.MG] = method_factory[Platforms.MGID]
-        method_factory[Platforms.ZP] = method_factory[Platforms.ZEROPARK]
-        method_factory[Platforms.TRACKER] = method_factory[Platforms.THRIVE]
-        return method_factory[platform][command]
+        method_map[Platforms.MG] = method_map[Platforms.MGID]
+        method_map[Platforms.ZP] = method_map[Platforms.ZEROPARK]
+        method_map[Platforms.TRACKER] = method_map[Platforms.THRIVE]
+        return method_map[platform][command]
 
     def parse_command(self, message: str) -> Tuple[Callable, Dict[str, Union[str, List[str]]]]:
         command_args = {}
@@ -109,26 +117,28 @@ class CommandParser:
             command_args['fields'] = fields
         for optional_arg in [
             'threshold',
-            'filter_limit',
         ]:
             if optional_arg in group_dict:
                 command_args[optional_arg] = group_dict[optional_arg]
 
-        # logger.debug(f"msg: {message} | matched: {match.re.pattern} | "
-        #               f"platform: {command_args['platform']}")
 
         # params with default value
-        for group_name, default_value in [
-            ('campaign_id', None),
-            ('time_interval', DEFAULT_TIME_INTERVAL),
-            ('widget_id', None),
+        for default_arg in [
+            DefaultArgument('campaign_id', None),
+            DefaultArgument('time_interval', DEFAULT_TIME_INTERVAL),
+            DefaultArgument('widget_id', None),
+            DefaultArgument('threshold', DEFAULT_CPA_THRESHOLD_INTERVAL,
+                            check=lambda: command_args['command'] == Commands.widgets_low_cpa),
         ]:
-            command_args[group_name] = group_dict.get(group_name) or default_value
+            if default_arg.check():
+                command_args[default_arg.name] = group_dict.get(default_arg.name) or default_arg.value
+
         # if passed 'all' for campaign_id -> for all campaigns
         if (command_args.get('campaign_id') or '').lower() == DEFAULT_ALL_CAMPAIGNS_ALIAS:
             command_args['campaign_id'] = None
         if (command_args.get('widget_id') or '').lower() == DEFAULT_ALL_CAMPAIGNS_ALIAS:
             command_args['widget_id'] = None
+
         # optional flags:
         for pattern in [
             re_patterns.Flags.DATE_RANGE,

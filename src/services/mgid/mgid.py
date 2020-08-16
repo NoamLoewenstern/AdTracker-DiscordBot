@@ -332,6 +332,7 @@ class MGid(PlatformService):
         widgets_stats = self.widgets_stats(campaign_id=campaign_id,
                                            sort_key='spent',
                                            fields=['id', 'spent'],
+                                           dateInterval=dateInterval,
                                            **kwargs)
         filtered_widgets: List[str] = [widget['id'] for widget in widgets_stats
                                        if widget['spent'] < float(threshold)]
@@ -374,7 +375,7 @@ class MGid(PlatformService):
 
         """
         * the unique ids in the platform -> are all bot-traffic.
-        * Because the the tracker doesn't return widgets with 0 clicks,
+        * Because the tracker doesn't return widgets with 0 clicks,
         * then all the widgets which are in platform-widgets but not in tracker - they are bot traffic.
         TODO figure out what to do with those bot-traffic-widgets.
         """
@@ -396,7 +397,7 @@ class MGid(PlatformService):
         bot_widgets_ids = []
         for widget in merged_widget_data:
             # Assuming thrive_clicks is over 0 (if was 0 - it would not have returned from tracker.)
-            bot_percent = widget['thrive_clicks'] / widget['platform_clicks'] * 100
+            bot_percent = 100 - (widget['thrive_clicks'] / widget['platform_clicks'] * 100)
             if bot_percent > int(threshold):
                 bot_widgets_ids.append(widget['id'])
         result = self.widgets_pause(campaign_id=campaign_id, list_widgets=bot_widgets_ids)
