@@ -47,7 +47,8 @@ class ArgumentParser(argparse.ArgumentParser):
 
     def _print_message(self, message, file=None):
         # super()._print_message(message, file)  # just prints to file
-        raise MyArgparseArgumentError(message)
+        # raise MyArgparseArgumentError(message)
+        pass
 
     def exit(self, status=0, message=None):
         pass

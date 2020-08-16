@@ -51,8 +51,8 @@ class Commands:
                                   re.IGNORECASE)
     WIDGETS_LOW_CPA = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>widgets-low-cpa)'
                                  + f'{campaign_id}'
-                                 + f'{threshold}'
-                                 + f'{date_interval_combined}?',
+                                 + f'{date_interval_combined}?'
+                                 + f'{threshold}?',
                                  re.IGNORECASE)
     WIDGETS_KILL_LONGTAIL = re.compile(r'^/(?P<platform>\w+?) (?P<cmd>widgets-kill-longtail)'
                                        + f'{campaign_id}'
