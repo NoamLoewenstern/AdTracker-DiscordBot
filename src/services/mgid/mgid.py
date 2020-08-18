@@ -176,7 +176,7 @@ class MGid(PlatformService):
         for stat in stats:
             bot_traffic = 0
             if stat['platform_clicks'] != 0:
-                bot_traffic = stat['thrive_clicks'] / stat['platform_clicks'] * 100
+                bot_traffic = 100 - (stat['thrive_clicks'] / stat['platform_clicks'] * 100)
             if bot_traffic != 100:
                 bot_traffic = f'{bot_traffic:0>5.2f}'
             result.append({

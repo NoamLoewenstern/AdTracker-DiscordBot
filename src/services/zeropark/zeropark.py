@@ -144,7 +144,7 @@ class ZeroPark(PlatformService):
         for stat in stats:
             bot_traffic = 0
             if stat['platform_clicks'] != 0:
-                bot_traffic = stat['thrive_clicks'] / stat['platform_clicks'] * 100
+                bot_traffic = 100 - (stat['thrive_clicks'] / stat['platform_clicks'] * 100)
             if bot_traffic != 100:
                 bot_traffic = f'{bot_traffic:0>5.2f}'
             result.append({
@@ -245,7 +245,7 @@ class ZeroPark(PlatformService):
         result = filter_result_by_fields(filtered_sites, fields)
         return result
 
-    def widgets_top(self, filter_limit: int = '',**kwargs) -> List[TargetStatsMergedData]:
+    def widgets_top(self, filter_limit: int = '', **kwargs) -> List[TargetStatsMergedData]:
         """
         Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
         """
