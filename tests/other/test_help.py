@@ -7,7 +7,7 @@ from tests import handle_content
 from . import log_resp
 
 PLATFORM = 'mgid'
-test_command = Commands.widgets_low_cpa.value
+test_command = Commands.widgets_low_cpa
 
 
 @pytest.mark.asyncio
@@ -44,6 +44,12 @@ async def test_command_missing_args():
 
 @pytest.mark.asyncio
 async def test_command_with_help_flag():
+    test_command = Commands.widgets_low_cpa
+    command = f'/{PLATFORM} {test_command} -h'
+    data = await handle_content(command)
+    assert log_resp(f'command: {command}\n\n{data}', f'help_command_with_help_flag.txt')
+    assert 'usage:' in data
+    test_command = 'bot-traffic'
     command = f'/{PLATFORM} {test_command} -h'
     data = await handle_content(command)
     assert log_resp(f'command: {command}\n\n{data}', f'help_command_with_help_flag.txt')
