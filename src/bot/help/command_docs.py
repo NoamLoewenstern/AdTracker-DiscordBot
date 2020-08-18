@@ -65,25 +65,25 @@ class CommandHelpDocumentation:
         self.command_group_help = self.get_arg_group_help_formatter()
 
     def _add_commands_to_subparser(self, subparser):
-        list_campaigns = subparser.add_parser(
-            Commands.list_campaigns.value, description=CommandDoc.list_campaigns, help=CommandDoc.list_campaigns)
+        list_campaigns = subparser.add_parser(Commands.list_campaigns.value,
+                                              description=CommandDoc.list_campaigns, help=CommandDoc.list_campaigns)
         list_campaigns.add_argument(ArgsDoc.campaign_id.name, nargs='?', help=ArgsDoc.campaign_id.value)
 
-        stats_campaign = subparser.add_parser(
-            Commands.stats_campaign.value, description=CommandDoc.stats_campaign, help=CommandDoc.stats_campaign)
+        stats_campaign = subparser.add_parser(Commands.stats_campaign.value,
+                                              description=CommandDoc.stats_campaign, help=CommandDoc.stats_campaign)
         stats_campaign.add_argument(ArgsDoc.campaign_id.name, nargs='?', help=ArgsDoc.campaign_id.value)
         stats_campaign.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
-        spent_campaign = subparser.add_parser(
-            Commands.spent_campaign.value, description=CommandDoc.spent_campaign, help=CommandDoc.spent_campaign)
+        spent_campaign = subparser.add_parser(Commands.spent_campaign.value,
+                                              description=CommandDoc.spent_campaign, help=CommandDoc.spent_campaign)
         spent_campaign.add_argument(ArgsDoc.campaign_id.name, nargs='?', help=ArgsDoc.campaign_id.value)
         spent_campaign.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
-        campaign_bot_traffic = subparser.add_parser(
-            Commands.campaign_bot_traffic.value, description=CommandDoc.bot_traffic, help=CommandDoc.bot_traffic)
+        campaign_bot_traffic = subparser.add_parser(Commands.campaign_bot_traffic.value,
+                                                    description=CommandDoc.bot_traffic, help=CommandDoc.bot_traffic)
         campaign_bot_traffic.add_argument(ArgsDoc.campaign_id.name, nargs='?', help=ArgsDoc.campaign_id.value)
-        campaign_bot_traffic.add_argument(ArgsDoc.time_interval.name,
-                                          nargs='?', help=ArgsDoc.time_interval.value)
+        campaign_bot_traffic.add_argument(ArgsDoc.time_interval.name, nargs='?',
+                                          help=ArgsDoc.time_interval.value)
 
         widgets_stats = subparser.add_parser(Commands.widgets_stats.value,
                                              description=CommandDoc.widgets_stats, help=CommandDoc.widgets_stats)
@@ -98,30 +98,30 @@ class CommandHelpDocumentation:
         widgets_top.add_argument(ArgsDoc.filter_limit.name, nargs='?', help=ArgsDoc.filter_limit.value)
         widgets_top.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
-        widgets_high_cpa = subparser.add_parser(
-            Commands.widgets_high_cpa.value, description=CommandDoc.widgets_high_cpa, help=CommandDoc.widgets_high_cpa)
+        widgets_high_cpa = subparser.add_parser(Commands.widgets_high_cpa.value,
+                                                description=CommandDoc.widgets_high_cpa, help=CommandDoc.widgets_high_cpa)
         widgets_high_cpa.add_argument(ArgsDoc.campaign_id.name)
         widgets_high_cpa.add_argument(ArgsDoc.threshold.name, help=ArgsDoc.threshold.value)
         widgets_high_cpa.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
 
-        widgets_low_cpa = subparser.add_parser(
-            Commands.widgets_low_cpa.value, description=CommandDoc.widgets_low_cpa, help=CommandDoc.widgets_low_cpa)
+        widgets_low_cpa = subparser.add_parser(Commands.widgets_low_cpa.value,
+                                               description=CommandDoc.widgets_low_cpa, help=CommandDoc.widgets_low_cpa)
         widgets_low_cpa.add_argument(ArgsDoc.campaign_id.name)
         widgets_low_cpa.add_argument(ArgsDoc.time_interval.name, nargs='?', help=ArgsDoc.time_interval.value)
         widgets_low_cpa.add_argument(ArgsDoc.threshold.name, nargs='?', default=DEFAULT_CPA_THRESHOLD_INTERVAL,
                                      help=ArgsDoc.threshold.value)
 
-        widgets_kill_longtail = subparser.add_parser(
-            Commands.widgets_kill_longtail.value, description=CommandDoc.widgets_kill_longtail, help=CommandDoc.widgets_kill_longtail)
+        widgets_kill_longtail = subparser.add_parser(Commands.widgets_kill_longtail.value,
+                                                     description=CommandDoc.widgets_kill_longtail, help=CommandDoc.widgets_kill_longtail)
         widgets_kill_longtail.add_argument(ArgsDoc.campaign_id.name)
         widgets_kill_longtail.add_argument(ArgsDoc.threshold.name, help=ArgsDoc.threshold.value)
 
-        widgets_turn_on_all = subparser.add_parser(
-            Commands.widgets_turn_on_all.value, help=CommandDoc.widgets_turn_on_all, description=CommandDoc.widgets_turn_on_all)
+        widgets_turn_on_all = subparser.add_parser(Commands.widgets_turn_on_all.value,
+                                                   description=CommandDoc.widgets_turn_on_all, help=CommandDoc.widgets_turn_on_all)
         widgets_turn_on_all.add_argument(ArgsDoc.campaign_id.name)
 
-        widget_kill_bot_traffic = subparser.add_parser(
-            Commands.widget_kill_bot_traffic.value, description=CommandDoc.widget_kill_bot_traffic, help=CommandDoc.widget_kill_bot_traffic)
+        widget_kill_bot_traffic = subparser.add_parser(Commands.widget_kill_bot_traffic.value,
+                                                       description=CommandDoc.widget_kill_bot_traffic, help=CommandDoc.widget_kill_bot_traffic)
         widget_kill_bot_traffic.add_argument(ArgsDoc.campaign_id.name)
         widget_kill_bot_traffic.add_argument(ArgsDoc.threshold.name, help=ArgsDoc.threshold.value)
         widget_kill_bot_traffic.add_argument(ArgsDoc.time_interval.name, help=ArgsDoc.time_interval.value)
@@ -176,15 +176,19 @@ class CommandHelpDocumentation:
 
     def parse_command(self, command: str):
         args = command.split(' ')
-        if args[0] in ('/?', '/help'):
+        if (platform := args[0]) in ('/?', '/help'):
             return False, self.program_help()
         if len(args) == 1 or (len(args) == 2 and '-h' in args):
             return False, self.program_help()
+        elif len(args) > 2 and '-h' in args and (command := args[1]) in self.subparser.choices:
+            command_help = self.subparser.choices[command].format_help()
+            return False, ArgumentParser._fix_format_usage(command_help)
         try:
             new_args = self._fixed_optional_flags_in_command(args[1:])
             parsed_args = self.parser.parse_args(new_args)
             return True, parsed_args
         except (MyArgparseArgumentError, argparse.ArgumentError) as e:
             return False, e.message
-        except SystemExit:
-            raise NotExpectedErrorParsingError("[!] Unexpected Parsing Command, Needs to be Checked.")
+        except (Exception, SystemExit) as e:
+            raise NotExpectedErrorParsingError(
+                f'[!] Unexpected Parsing Command, Needs to be Checked. Error: {e}')

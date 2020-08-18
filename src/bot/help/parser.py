@@ -7,11 +7,12 @@ from errors import MyArgparseArgumentError
 
 class ArgumentParser(argparse.ArgumentParser):
 
-    def _fix_format_usage(self, usage_msg):
+    @staticmethod
+    def _fix_format_usage(usage_msg: str):
         fixed_usage = usage_msg
         pattern_usage_with_sub_command = re.compile(r'(.*)( .+? \[-h\])(?=.+\[-h\])',
                                                     re.DOTALL | re.IGNORECASE)
-        replace_space_in_usage = re.compile(r'\n +( \[-h])', re.DOTALL | re.IGNORECASE)
+        replace_space_in_usage = re.compile(r'\n {2,} ( \[(?:-h|\w+)\])', re.DOTALL | re.IGNORECASE)
         fixed_usage = pattern_usage_with_sub_command.sub(r'\1', fixed_usage)
         fixed_usage = replace_space_in_usage.sub(r'\1', fixed_usage)
 
