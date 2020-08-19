@@ -284,14 +284,23 @@ class MGid(PlatformService):
                                     'status_code': resp.status_code},
                            explain=resp.reason)
 
-    def _widgets_init_filter_to_blacklist(self, campaign_id: str) -> None:
-        """ if is already blacklist ('except') - method does nothing """
+    def _widgets_init_filter_to_blacklist(self, campaign_id: str) -> List:
+        """ if is already blacklist ('except') - method does nothing 
+        return: current/new list of 'blacklisted' widgets
+        """
         # CLEANING CURRENT FILTER ON WIDGETS IF IS NOT BLACKLIST
-        camps_stats = self.list_campaigns(campaign_id=campaign_id, fields=[
-                                          'widgetsFilterUid'], case_sensitive=True)
+        camps_stats = self.list_campaigns(campaign_id=campaign_id, 
+                                          fields=['widgetsFilterUid'], 
+                                          case_sensitive=True)
         cur_filterType = camps_stats[0]['widgetsFilterUid']['filterType'].lower()
+        cur_filterType_widgets = camps_stats[0]['widgetsFilterUid']['widgets'] or []  # if is empty dict - will return empty list
+        
         if cur_filterType == 'only':
             self.widgets_turn_on_all(campaign_id=campaign_id)
+            return []
+        if cur_filterType_widgets and isinstance(cur_filterType_widgets, dict):
+            cur_filterType_widgets = list(cur_filterType_widgets.keys())
+        return cur_filterType_widgets
 
     def widgets_turn_on_all(self, campaign_id: str, **kwargs) -> dict:
         url_turn_off_filter = urls.WIDGETS.RESUME.format(campaign_id=campaign_id)
@@ -305,13 +314,13 @@ class MGid(PlatformService):
             'Data': f'Campaign: {campaign_id}',
         }
 
-    def widgets_pause(self, campaign_id: str, list_widgets: List[str]) -> dict:
+    def _widgets_pause(self, campaign_id: str, list_widgets: List[str]) -> dict:
         # CLEANING CURRENT FILTER ON WIDGETS IF IS NOT BLACKLIST
         # if is already blacklist ('except') - method does nothing
-        self._widgets_init_filter_to_blacklist(campaign_id=campaign_id)
-
+        cur_blacklist = self._widgets_init_filter_to_blacklist(campaign_id=campaign_id)
+        widgets_to_pause = [widget for widget in list_widgets if widget not in cur_blacklist]
         url = urls.WIDGETS.PAUSE.format(campaign_id=campaign_id)
-        for chunk_widgets in chunks(list_widgets, MAX_URL_PARAMS_SIZE):
+        for chunk_widgets in chunks(widgets_to_pause, MAX_URL_PARAMS_SIZE):
             url = update_url_params(url, {'widgetsFilterUid': "include,except,{ids}"
                                           .format(ids=','.join(chunk_widgets))})
             resp = self.patch(url)
@@ -319,7 +328,8 @@ class MGid(PlatformService):
 
         return {
             'Success': True,
-            'Action': f'Paused {len(list_widgets)} Widgets',
+            'Action': f'Paused {len(widgets_to_pause)} Widgets',
+            # 'Number Widgets': len(widgets_to_pause),
             'Data': f'Campaign: {campaign_id}',
         }
 
@@ -337,7 +347,7 @@ class MGid(PlatformService):
         filtered_widgets: List[str] = [widget['id'] for widget in widgets_stats
                                        if widget['spent'] < float(threshold)]
 
-        result = self.widgets_pause(campaign_id=campaign_id, list_widgets=filtered_widgets)
+        result = self._widgets_pause(campaign_id=campaign_id, list_widgets=filtered_widgets)
         return result
 
     @adjust_dateInterval_params
@@ -400,6 +410,6 @@ class MGid(PlatformService):
             bot_percent = 100 - (widget['thrive_clicks'] / widget['platform_clicks'] * 100)
             if bot_percent > int(threshold):
                 bot_widgets_ids.append(widget['id'])
-        result = self.widgets_pause(campaign_id=campaign_id, list_widgets=bot_widgets_ids)
-        logger.debug(f'[{campaign_id}] Paused Widgets: {len(bot_widgets_ids)} / {len(merged_widget_data)}')
+        result = self._widgets_pause(campaign_id=campaign_id, list_widgets=bot_widgets_ids)
+        # logger.debug(f'[{campaign_id}] Paused Widgets: {len(bot_widgets_ids)} / {len(merged_widget_data)}')
         return result
