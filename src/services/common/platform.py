@@ -64,15 +64,19 @@ class PlatformService(CommonService):
     def _merge_and_update_list_objects(self,
                                        list_objects_1: Union[Dict, List[Dict]],
                                        list_objects_2: Union[Dict, List[Dict]],
+                                       /, 
                                        key='id',
                                        just_common=False,
-                                       ) -> List[BaseModel]:
+                                       ) -> List[Dict]:
         if isinstance(list_objects_1, list):
+            # 'key' in obj-dict will be the keys in the new dict (to allow merging object-dict)
             dict_1 = {obj[key]: obj for obj in list_objects_1}
             dict_2 = {obj[key]: obj for obj in list_objects_2}
-        else:
+        elif isinstance(list_objects_1, dict):
             dict_1 = list_objects_1
             dict_2 = list_objects_2
+        else:
+            raise ValueError("Must Pass Type Dict | List[Dict]. Passed " + str(type(list_objects_1)))
 
         set_d1_keys = set(dict_1)
         set_d2_keys = set(dict_2)
@@ -85,6 +89,7 @@ class PlatformService(CommonService):
         merged_list = [merge_objs(dict_1[key], dict_2[key]) for key in common_keys]
         if just_common:
             return merged_list
+        # Adds the objects which have UNIQUE 'key' from each list of objects.
         merged_list.extend(dict_1[key] for key in unique_keys_1)
         merged_list.extend(dict_2[key] for key in unique_keys_2)
         return merged_list

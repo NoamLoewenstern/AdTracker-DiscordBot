@@ -285,16 +285,17 @@ class MGid(PlatformService):
                            explain=resp.reason)
 
     def _widgets_init_filter_to_blacklist(self, campaign_id: str) -> List:
-        """ if is already blacklist ('except') - method does nothing 
+        """ if is already blacklist ('except') - method does nothing
         return: current/new list of 'blacklisted' widgets
         """
         # CLEANING CURRENT FILTER ON WIDGETS IF IS NOT BLACKLIST
-        camps_stats = self.list_campaigns(campaign_id=campaign_id, 
-                                          fields=['widgetsFilterUid'], 
+        camps_stats = self.list_campaigns(campaign_id=campaign_id,
+                                          fields=['widgetsFilterUid'],
                                           case_sensitive=True)
         cur_filterType = camps_stats[0]['widgetsFilterUid']['filterType'].lower()
-        cur_filterType_widgets = camps_stats[0]['widgetsFilterUid']['widgets'] or []  # if is empty dict - will return empty list
-        
+        # if is empty dict - will return empty list
+        cur_filterType_widgets = camps_stats[0]['widgetsFilterUid']['widgets'] or []
+
         if cur_filterType == 'only':
             self.widgets_turn_on_all(campaign_id=campaign_id)
             return []
@@ -314,7 +315,7 @@ class MGid(PlatformService):
             'Data': f'Campaign: {campaign_id}',
         }
 
-    def _widgets_pause(self, campaign_id: str, list_widgets: List[str]) -> dict:
+    def _widgets_pause(self, campaign_id: str, list_widgets: List[str]) -> List[str]:
         # CLEANING CURRENT FILTER ON WIDGETS IF IS NOT BLACKLIST
         # if is already blacklist ('except') - method does nothing
         cur_blacklist = self._widgets_init_filter_to_blacklist(campaign_id=campaign_id)
@@ -325,13 +326,7 @@ class MGid(PlatformService):
                                           .format(ids=','.join(chunk_widgets))})
             resp = self.patch(url)
             self._validate_widget_filter_resp(resp)
-
-        return {
-            'Success': True,
-            'Action': f'Paused {len(widgets_to_pause)} Widgets',
-            # 'Number Widgets': len(widgets_to_pause),
-            'Data': f'Campaign: {campaign_id}',
-        }
+        return widgets_to_pause
 
     @adjust_dateInterval_params
     def widgets_kill_longtail(self, *,
@@ -347,8 +342,17 @@ class MGid(PlatformService):
         filtered_widgets: List[str] = [widget['id'] for widget in widgets_stats
                                        if widget['spent'] < float(threshold)]
 
-        result = self._widgets_pause(campaign_id=campaign_id, list_widgets=filtered_widgets)
-        return result
+        widgets_paused_ids = self._widgets_pause(campaign_id=campaign_id, list_widgets=filtered_widgets)
+        widgets_paused_stats = [widget for widget in widgets_stats if widget['id'] in widgets_paused_ids]
+        widgets_paused_total_spent = sum(widget['spent'] for widget in widgets_paused_stats)
+        time_interval = kwargs.get('time_interval', None),
+        return {
+            'Success': True,
+            'Action': f'Paused {len(widgets_paused_ids)} Widgets',
+            # 'Number Widgets': len(widgets_to_pause),
+            f"Stopped Widgets' Spent Amount in Last {time_interval} was": widgets_paused_total_spent,
+            'Data': f'Campaign: {campaign_id}',
+        }
 
     @adjust_dateInterval_params
     def widget_kill_bot_traffic(self, *,
@@ -378,7 +382,7 @@ class MGid(PlatformService):
 
         widgets = self.widgets_stats(campaign_id=campaign_id,
                                      sort_key='platform_clicks',
-                                     fields=['id', 'platform_clicks'],
+                                     fields=['id', 'platform_clicks', 'spent'],
                                      **kwargs)
         widgets = [w for w in widgets if w['platform_clicks'] != 0]
         widgets_dict = {w['id']: w for w in widgets}
@@ -410,6 +414,15 @@ class MGid(PlatformService):
             bot_percent = 100 - (widget['thrive_clicks'] / widget['platform_clicks'] * 100)
             if bot_percent > int(threshold):
                 bot_widgets_ids.append(widget['id'])
-        result = self._widgets_pause(campaign_id=campaign_id, list_widgets=bot_widgets_ids)
+        widgets_paused_ids = self._widgets_pause(campaign_id=campaign_id, list_widgets=bot_widgets_ids)
+        widgets_paused_stats = [widget for widget in merged_widget_data if widget['id'] in widgets_paused_ids]
+        widgets_paused_total_spent = sum(widget['spent'] for widget in widgets_paused_stats)
+        time_interval = kwargs.get('time_interval', None),
         # logger.debug(f'[{campaign_id}] Paused Widgets: {len(bot_widgets_ids)} / {len(merged_widget_data)}')
-        return result
+        return {
+            'Success': True,
+            'Action': f'Paused {len(widgets_paused_ids)} Widgets',
+            # 'Number Widgets': len(widgets_to_pause),
+            f"Stopped Widgets' Spent Amount in Last {time_interval} was": widgets_paused_total_spent,
+            'Data': f'Campaign: {campaign_id}',
+        }
