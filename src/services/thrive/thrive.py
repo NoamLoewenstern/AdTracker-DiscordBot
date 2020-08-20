@@ -116,7 +116,7 @@ class Thrive(CommonService):
             if widget_stat['id'] == 'unknown':
                 unknown_widgets_ids.append(list_objects.pop(i))
         if unknown_widgets_ids:
-            logger.error(f'[thrive] [widgets_stats] [platform:{platform}] '
+            logger.warning(f'[thrive] [widgets_stats] [platform:{platform}] '
                          f'{len(unknown_widgets_ids)} Unknown Widgets.')
         return unknown_widgets_ids
 

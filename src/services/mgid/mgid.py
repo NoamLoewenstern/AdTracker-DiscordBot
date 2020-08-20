@@ -11,7 +11,7 @@ from errors.platforms import CampaignNameMissingTrackerIDError
 from logger import logger
 # from services.thrive import Thrive
 from utils import (OPERATORS_MAP, alias_param, append_url_params, chunks,
-                   update_url_params)
+                   format_float, update_url_params)
 
 from ..common.platform import PlatformService
 from ..common.schemas import BaseModel
@@ -178,7 +178,7 @@ class MGid(PlatformService):
             if stat['platform_clicks'] != 0:
                 bot_traffic = 100 - (stat['thrive_clicks'] / stat['platform_clicks'] * 100)
             if bot_traffic != 100:
-                bot_traffic = f'{bot_traffic:0>5.2f}'
+                bot_traffic = format_float(bot_traffic)
             result.append({
                 stat['name']: f'{bot_traffic}%',
                 'thrive_clicks': stat['thrive_clicks'],
@@ -420,19 +420,19 @@ class MGid(PlatformService):
         widgets_paused_ids = self._widgets_pause(campaign_id=campaign_id, list_widgets=bot_widgets_ids)
         widgets_paused_stats = [widget for widget in merged_widget_data if widget['id'] in widgets_paused_ids]
         widgets_paused_sum_spent = sum(widget['spent'] for widget in widgets_paused_stats)
-        time_interval = kwargs.get('time_interval', None),
+        time_interval = kwargs.get('time_interval', None)
         # logger.debug(f'[{campaign_id}] Paused Widgets: {len(bot_widgets_ids)} / {len(merged_widget_data)}')
         optional_data = {}
         if just_in_platform:
             optional_data.update({'Widgets Not In Tracker Number': len(just_in_platform),
-                                  'Widgets Not In Tracker Spent Sum': f'{just_in_platform_widgets_sum_spent:0>5.2f}',
+                                  'Widgets Not In Tracker Spent Sum': format_float(just_in_platform_widgets_sum_spent),
                                   })
 
         return {
             'Success': True,
             'Action': f'Paused {len(widgets_paused_ids)} Widgets',
             # 'Number Widgets': len(widgets_to_pause),
-            f"Stopped Widgets' Spent Amount in Last {time_interval} was": f'{widgets_paused_sum_spent:0>5.2f}',
+            f"Stopped Widgets' Spent Amount in Last {time_interval} was": format_float(widgets_paused_sum_spent),
             'Data': f'Campaign: {campaign_id}',
             **optional_data,
         }

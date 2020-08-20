@@ -86,3 +86,7 @@ def convert_list_dicts_to_csv_file(list_dicts: GENERAL_RESP_TYPE) -> Path:
         fc.writeheader()
         fc.writerows(list_dicts)
     return Path(output_file.name)
+
+
+def format_float(num: Union[str, int, float]):
+    return float(f'{num:0>5.2f}')
