@@ -398,6 +398,9 @@ class MGid(PlatformService):
         common_ids = widgets_ids & tracker_widgets_ids
 
         just_in_platform = widgets_ids - tracker_widgets_ids
+        just_in_platform_widgets = [w for w in widgets if w['id'] in just_in_platform]
+        just_in_platform_widgets_sum_spent = sum(widget['spent'] for widget in just_in_platform_widgets)
+
         just_in_tracker = tracker_widgets_ids - widgets_ids
         # logger.info('[MGID] [widget_kill_bot_traffic] Platform Widgets & Tracker Widgets Differences: '
         #             #   f'len(just_in_platform):{len(just_in_platform)}\nlen(just_in_tracker):{len(just_in_tracker)}')
@@ -416,13 +419,20 @@ class MGid(PlatformService):
                 bot_widgets_ids.append(widget['id'])
         widgets_paused_ids = self._widgets_pause(campaign_id=campaign_id, list_widgets=bot_widgets_ids)
         widgets_paused_stats = [widget for widget in merged_widget_data if widget['id'] in widgets_paused_ids]
-        widgets_paused_total_spent = sum(widget['spent'] for widget in widgets_paused_stats)
+        widgets_paused_sum_spent = sum(widget['spent'] for widget in widgets_paused_stats)
         time_interval = kwargs.get('time_interval', None),
         # logger.debug(f'[{campaign_id}] Paused Widgets: {len(bot_widgets_ids)} / {len(merged_widget_data)}')
+        optional_data = {}
+        if just_in_platform:
+            optional_data.update({'Widgets Not In Tracker Number': len(just_in_platform),
+                                  'Widgets Not In Tracker Spent Sum': f'{just_in_platform_widgets_sum_spent:0>5.2f}',
+                                  })
+
         return {
             'Success': True,
             'Action': f'Paused {len(widgets_paused_ids)} Widgets',
             # 'Number Widgets': len(widgets_to_pause),
-            f"Stopped Widgets' Spent Amount in Last {time_interval} was": widgets_paused_total_spent,
+            f"Stopped Widgets' Spent Amount in Last {time_interval} was": f'{widgets_paused_sum_spent:0>5.2f}',
             'Data': f'Campaign: {campaign_id}',
+            **optional_data,
         }
