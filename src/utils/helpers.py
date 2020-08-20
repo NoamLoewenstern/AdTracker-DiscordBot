@@ -41,9 +41,12 @@ def chunks(lst: list, n: int):
 
 
 def merge_objs(obj1: Dict[str, Dict], obj2: Dict[str, Dict]) -> List[Dict]:
+    """ MERGED 2 dictionaries with the (int, float) types only.
+    Every other Value Type will be OVERRIDDEN with the value from the SECOND DICT."""
     common_keys = set(obj1) & set(obj2)
 
     combined = {
+        # merge object's content if have the same key.
         key: obj1[key] + obj2[key]
         for key in common_keys
         if isinstance(obj1[key], (int, float))
