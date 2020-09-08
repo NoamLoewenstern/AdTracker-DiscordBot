@@ -345,12 +345,12 @@ class MGid(PlatformService):
         widgets_paused_ids = self._widgets_pause(campaign_id=campaign_id, list_widgets=filtered_widgets)
         widgets_paused_stats = [widget for widget in widgets_stats if widget['id'] in widgets_paused_ids]
         widgets_paused_total_spent = sum(widget['spent'] for widget in widgets_paused_stats)
-        time_interval = kwargs.get('time_interval', None),
+        time_interval = kwargs.get('time_interval', None)
         return {
             'Success': True,
             'Action': f'Paused {len(widgets_paused_ids)} Widgets',
             # 'Number Widgets': len(widgets_to_pause),
-            f"Stopped Widgets' Spent Amount in Last {time_interval} was": widgets_paused_total_spent,
+            f"Stopped Widgets' Spent Amount in Last {time_interval}": widgets_paused_total_spent,
             'Data': f'Campaign: {campaign_id}',
         }
 
@@ -432,7 +432,7 @@ class MGid(PlatformService):
             'Success': True,
             'Action': f'Paused {len(widgets_paused_ids)} Widgets',
             # 'Number Widgets': len(widgets_to_pause),
-            f"Stopped Widgets' Spent Amount in Last {time_interval} was": format_float(widgets_paused_sum_spent),
+            f"Stopped Widgets' Spent Amount in Last {time_interval}": format_float(widgets_paused_sum_spent),
             'Data': f'Campaign: {campaign_id}',
             **optional_data,
         }
