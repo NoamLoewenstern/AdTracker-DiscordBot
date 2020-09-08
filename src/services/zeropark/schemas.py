@@ -43,17 +43,17 @@ class State(BaseModel):
 
 class Details(CampaignBaseData):
     # details:
-    geo: str
-    type: str
-    trafficSourceType: List[str]
-    url: str
-    totalBudget: Budget
-    dailyBudget: Budget
-    bid: float
-    state: State
-    optimisation: str
-    demographicTargeting: bool
-    privateDeal: bool
+    geo: str = None
+    type: str = None
+    trafficSourceType: List[str] = None
+    url: str = None
+    totalBudget: Budget = None
+    dailyBudget: Budget = None
+    bid: float = None
+    state: State = None
+    optimisation: str = None
+    demographicTargeting: bool = None
+    privateDeal: bool = None
 
 
 class Stats(BaseModel):
