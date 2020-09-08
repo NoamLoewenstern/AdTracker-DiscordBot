@@ -139,8 +139,11 @@ async def send_msg(channel, msg: str, orig_resp: GENERAL_RESP_TYPE) -> None:
         pass
     if len(msg) > MAX_NUMBER_LINES:
         # sends resp in multiple messages if exceeds tha max chars per message.
-        for block_resp in groupify_list_strings(msg.split('\n\n'), MAX_NUMBER_LINES, joiner='\n\n'):
-            await channel.send(block_resp)
+        for block in groupify_list_strings(msg.split('\n\n'), MAX_NUMBER_LINES, joiner='\n\n'):
+            if block:
+                await channel.send(block)
+            else:
+                print(f'Trying sending Empty messge: {block}')
         return
     return await channel.send(msg)
 
