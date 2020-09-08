@@ -137,18 +137,29 @@ async def send_msg(channel, msg: str, orig_resp: GENERAL_RESP_TYPE) -> None:
             return await channel.send(file=discord.File(str(csv_file)))
     except:
         pass
-    if len(msg) > MAX_NUMBER_LINES:
-        # sends resp in multiple messages if exceeds tha max chars per message.
-        for block in groupify_list_strings(msg.split('\n\n'), MAX_NUMBER_LINES, joiner='\n\n'):
-            if block:
-                await channel.send(block)
-            else:
-                print(f'Trying sending Empty messge: {block}')
-        return
-    return await channel.send(msg)
+    try:
+        if len(msg) > MAX_NUMBER_LINES:
+            # sends resp in multiple messages if exceeds tha max chars per message.
+            for block in groupify_list_strings(msg.split('\n\n'), MAX_NUMBER_LINES, joiner='\n\n'):
+                if block:
+                    await channel.send(block)
+                else:
+                    print(f'Trying sending Empty messge: {block}')
+            return
+        return await channel.send(msg)
+    except Exception as e:
+        err_msg = f'Internal Error - Unexpected: {e}\n{traceback.format_exc()}'
+        try:
+            print(err_msg)
+            return await channel.send(err_msg)
+        except Exception as e:
+            msg = ('=' * 10) + '\n'
+            msg += 'AGAIN ERROR - CANNOT SEND MESSAGES TO DISCORD CHANNEL'
+            msg = '\n' + ('=' * 10)
+            print(msg)
 
 
-@client.event
+@ client.event
 async def on_message(message):
     if message.author == client.user:  # ignore bot messages
         return
