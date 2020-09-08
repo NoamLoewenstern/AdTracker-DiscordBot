@@ -153,10 +153,12 @@ async def send_msg(channel, msg: str, orig_resp: GENERAL_RESP_TYPE) -> None:
             print(err_msg)
             return await channel.send(err_msg)
         except Exception as e:
-            msg = ('=' * 10) + '\n'
-            msg += 'AGAIN ERROR - CANNOT SEND MESSAGES TO DISCORD CHANNEL'
-            msg = '\n' + ('=' * 10)
-            print(msg)
+            sec_err_msg = ('=' * 10) + '\n'
+            sec_err_msg += 'AGAIN ERROR - CANNOT SEND MESSAGES TO DISCORD CHANNEL'
+            sec_err_msg += '\n' + ('=' * 10)
+            sec_err_msg += '\n' + 'Message Tried to Send:\n'
+            sec_err_msg += msg
+            print(sec_err_msg)
 
 
 @ client.event
