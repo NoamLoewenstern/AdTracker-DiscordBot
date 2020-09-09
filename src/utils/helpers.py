@@ -3,7 +3,7 @@ import re
 import tempfile
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, Iterable, List, Union
 
 GENERAL_RESP_TYPE = Union[str, List[Dict[Union[str, int], Union[str, int, float, bool]]]]
 
@@ -34,7 +34,7 @@ def alias_param(alias: str, key: str,
     return decorator
 
 
-def chunks(lst: list, n: int):
+def chunks(lst: Iterable, n: int):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i:i + n]

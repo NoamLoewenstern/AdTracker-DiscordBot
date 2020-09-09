@@ -1,13 +1,16 @@
+import math
+from os import stat
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
-from config import DEFAULT_FILTER_NUMBER, MAX_URL_PARAMS_SIZE
+from config import (DEFAULT_FILTER_NUMBER, DEFAULT_TIME_INTERVAL,
+                    MAX_BODY_SIZE, MAX_URL_PARAMS_SIZE)
 from constants import DEBUG
 from errors import APIError, ErrorList
 from errors.platforms import CampaignNameMissingTrackerIDError
 from logger import logger
 # from extensions import Thrive
 from utils import (OPERATORS_MAP, alias_param, append_url_params, chunks,
-                   update_url_params, format_float)
+                   format_float, update_url_params)
 
 from ..common.platform import PlatformService
 from ..common.utils import (add_interval_startend_dates, fields_list_hook,
@@ -203,8 +206,9 @@ class ZeroPark(PlatformService):
                       campaignNameOrId: str,
                       interval: str = 'TODAY',
                       widget_name: str = None,
-                      filter_limit: int = '',
+                      filter_limit: int = None,
                       sort_key: str = 'CONVERSIONS',
+                      state: Union[Literal['ACTIVE', 'PAUSED']] = None,
                       fields: List[str] = ['target', 'spent', 'conversions', 'ecpa'],
                       **kwargs) -> List[TargetStatsMergedData]:
         """
@@ -213,45 +217,65 @@ class ZeroPark(PlatformService):
         assert not filter_limit or str(filter_limit).isnumeric(), "'filter_limit' Must Be Number."
         assert sort_key in (allowed := ['SPENT', 'NAME', 'GEO', 'TYPE', 'BUDGET', 'STATE',
                                         'REDIRECTS', 'CONVERSIONS', 'PAYOUT']), f"'sort_key' allowed values: {allowed}"
+
+        def calc_num_pages(url):
+            check_limit = 2  # just to get total
+            url = update_url_params(url, {'limit': check_limit})
+            resp = self.get(url).json()
+            resp_model: TargetStatsByCampaignResponse = TargetStatsByCampaignResponse.parse_obj(resp)
+            pages = resp_model.total / MAX_BODY_SIZE
+            return math.ceil(pages)
         url = urls.WIDGETS.LIST.format(campaign_id=campaignNameOrId)
         url = update_url_params(url, {'campaignId': campaignNameOrId,
                                       'interval': interval,
                                       'startDate': kwargs.get('startDate', ''),
                                       'endDate': kwargs.get('endDate', ''),
                                       'sortColumn': sort_key,
-                                      'limit': filter_limit or MAX_URL_PARAMS_SIZE,
+                                      'limit': MAX_BODY_SIZE,
+                                      'page': 0,
                                       })
+        if state is not None:
+            url = update_url_params(url, {'states': state})
+
+        # Checking if Given WidgetID Exists:
         if widget_name is not None:
             url = update_url_params(url, {'targetAddresses': widget_name})
-
-        resp = self.get(url).json()
-        resp_model = TargetStatsByCampaignResponse.parse_obj(resp)
-        # Checking if Given WidgetID Exists:
-        if widget_name is not None and not resp_model.elements \
-                and not self._widget_exists(
-                    time_interval=kwargs['time_interval'],
-                    campaignNameOrId=campaignNameOrId,
-                    widget_name=widget_name,
-                ):
-            return [], ErrorList([f"No Such Widget Exists: '{widget_name}'"])
+            resp = self.get(url).json()
+            resp_model = TargetStatsByCampaignResponse(**resp)
+            if not resp_model.elements \
+                    and not self._widget_exists(
+                        time_interval=kwargs['time_interval'],
+                        campaignNameOrId=campaignNameOrId,
+                        widget_name=widget_name,
+                    ):
+                return [], ErrorList([f"No Such Widget Exists: '{widget_name}'"])
+            else:
+                all_widgets_stats = resp_model.elements
+        else:
+            all_widgets_stats = []
+            num_pages_needed = calc_num_pages(url)
+            for page_num in range(num_pages_needed):
+                url = update_url_params(url, {'page': page_num})
+                resp = self.get(url).json()
+                resp_model = TargetStatsByCampaignResponse(**resp)
+                # todo validate that only the currect state is returning results
+                all_widgets_stats.extend(resp_model.elements)
 
         merged_widget_data = [TargetStatsMergedData(**widget_data.dict(include={'id', 'target',
                                                                                 'source', 'sourceId',
                                                                                 'trafficSourceType', 'state'}),
                                                     **widget_data.stats.dict())
-                              for widget_data in resp_model.elements]
+                              for widget_data in all_widgets_stats]
         merged_widget_data.sort(key=lambda widget: widget.conversions, reverse=True)
-        filtered_sites = merged_widget_data[:int(filter_limit)] if filter_limit else merged_widget_data
+        filtered_sites = merged_widget_data[:int(filter_limit or 1)] if filter_limit else merged_widget_data
         result = filter_result_by_fields(filtered_sites, fields)
         return result
 
-    def widgets_top(self, filter_limit: int = '', **kwargs) -> List[TargetStatsMergedData]:
+    def widgets_top(self, filter_limit: int = DEFAULT_FILTER_NUMBER, **kwargs) -> List[TargetStatsMergedData]:
         """
         Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
         """
-        if not filter_limit:
-            filter_limit = DEFAULT_FILTER_NUMBER
-        return self.widgets_stats(filter_limit=filter_limit, **kwargs)
+        return self.widgets_stats(filter_limit=filter_limit, sort_key='CONVERSIONS', **kwargs)
 
     @fields_list_hook(TargetStatsMergedData)
     def widgets_filter_cpa(self, *,
@@ -296,21 +320,19 @@ class ZeroPark(PlatformService):
     def widgets_turn_on_all(self, campaignNameOrId: str, **kwargs) -> dict:
         kwargs.update({
             'campaignNameOrId': campaignNameOrId,
-            'filter_limit': '',
             'fields': ['target', 'state'],
-            'time_interval': '60d',
+            'time_interval': DEFAULT_TIME_INTERVAL,
+            'state': 'PAUSED',
         })
-        widgets = self.widgets_stats(**kwargs)
-        non_active_targets_names = [widget['target']
-                                    for widget in widgets if widget['state']['state'] != 'ACTIVE']
+        paused_widgets = self.widgets_stats(**kwargs)
         url = urls.WIDGETS.RESUME.format(campaign_id=campaignNameOrId)
-        for chunk_widgets in chunks(non_active_targets_names, MAX_URL_PARAMS_SIZE):
-            url = update_url_params(url, {'hashOrAddress': ','.join(non_active_targets_names)})
+        for chunk_widgets in chunks(paused_widgets, MAX_URL_PARAMS_SIZE):
+            url = update_url_params(url, {'hashOrAddress': ','.join(paused_widgets)})
             resp = self.post(url)
             self._validate_widget_filter_resp(resp)
         return {
             'Success': True,
-            'Action': f'Turned On {len(non_active_targets_names)} Widgets',
+            'Action': f'Turned On {len(paused_widgets)} Widgets',
             'Data': f'Campaign: {campaignNameOrId}',
         }
 
@@ -322,24 +344,21 @@ class ZeroPark(PlatformService):
                               ) -> dict:
         kwargs.update({
             'campaignNameOrId': campaignNameOrId,
-            'filter_limit': '',
             'fields': ['target', 'spent', 'state'],
-            'time_interval': '60d',
+            'time_interval': DEFAULT_TIME_INTERVAL,
         })
-        widgets_stats = self.widgets_stats(sort_key='SPENT', **kwargs)
-        filtered_active_targets: List[str] = [widget['target'] for widget in widgets_stats
-                                              if widget['spent'] < float(threshold)
-                                              and widget['state']['state'] == 'ACTIVE'
-                                              and 'PAUSE' in widget['state']['actions']]
+        active_widgets_stats = self.widgets_stats(sort_key='SPENT', state='ACTIVE', **kwargs)
+        filtered_by_spent = [widget for widget in active_widgets_stats
+                             if widget['spent'] < float(threshold)]
 
         url = urls.WIDGETS.PAUSE.format(campaign_id=campaignNameOrId)
-        for chunk_widgets in chunks(filtered_active_targets, MAX_URL_PARAMS_SIZE):
-            url = update_url_params(url, {'hashOrAddress': ','.join(filtered_active_targets)})
+        for chunk_widgets in chunks(active_widgets_stats, MAX_URL_PARAMS_SIZE):
+            url = update_url_params(url, {'hashOrAddress': ','.join(active_widgets_stats)})
             resp = self.post(url)
             self._validate_widget_filter_resp(resp)
         return {
             'Success': True,
-            'Action': f'Paused {len(filtered_active_targets)} Widgets',
+            'Action': f'Paused {len(active_widgets_stats)} Widgets',
             'Data': f'Campaign: {campaignNameOrId}',
         }
 
