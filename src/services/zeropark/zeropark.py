@@ -320,14 +320,15 @@ class ZeroPark(PlatformService):
     def widgets_turn_on_all(self, campaignNameOrId: str, **kwargs) -> dict:
         kwargs.update({
             'campaignNameOrId': campaignNameOrId,
-            'fields': ['target', 'state'],
+            'fields': ['target'],
             'time_interval': DEFAULT_TIME_INTERVAL,
             'state': 'PAUSED',
         })
         paused_widgets = self.widgets_stats(**kwargs)
+        widgets_names = [w['target'] for w in paused_widgets]
         url = urls.WIDGETS.RESUME.format(campaign_id=campaignNameOrId)
-        for chunk_widgets in chunks(paused_widgets, MAX_URL_PARAMS_SIZE):
-            url = update_url_params(url, {'hashOrAddress': ','.join(paused_widgets)})
+        for chunk_widgets_names in chunks(widgets_names, MAX_URL_PARAMS_SIZE):
+            url = update_url_params(url, {'hashOrAddress': ','.join(chunk_widgets_names)})
             resp = self.post(url)
             self._validate_widget_filter_resp(resp)
         return {
@@ -348,12 +349,12 @@ class ZeroPark(PlatformService):
             'time_interval': DEFAULT_TIME_INTERVAL,
         })
         active_widgets_stats = self.widgets_stats(sort_key='SPENT', state='ACTIVE', **kwargs)
-        filtered_by_spent = [widget for widget in active_widgets_stats
-                             if widget['spent'] < float(threshold)]
+        widgets_names_filtered_by_spent = [widget['target'] for widget in active_widgets_stats
+                                           if widget['spent'] < float(threshold)]
 
         url = urls.WIDGETS.PAUSE.format(campaign_id=campaignNameOrId)
-        for chunk_widgets in chunks(active_widgets_stats, MAX_URL_PARAMS_SIZE):
-            url = update_url_params(url, {'hashOrAddress': ','.join(active_widgets_stats)})
+        for chunk_widgets_names in chunks(widgets_names_filtered_by_spent, MAX_URL_PARAMS_SIZE):
+            url = update_url_params(url, {'hashOrAddress': ','.join(chunk_widgets_names)})
             resp = self.post(url)
             self._validate_widget_filter_resp(resp)
         return {
