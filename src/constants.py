@@ -1,7 +1,7 @@
 import os
 from enum import Enum
 
-DEFAULT_TIMEOUT_API_REQUEST = 30  # Seconds
+DEFAULT_TIMEOUT_API_REQUEST = 120  # Seconds
 DEBUG = os.getenv('DEBUG', False)
 DEV = os.getenv('DEV', False)
 
