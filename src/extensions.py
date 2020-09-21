@@ -4,7 +4,8 @@ from enum import Enum
 import logger
 from bot.help import CommandHelpDocumentation
 from services import MGid, Thrive, ZeroPark
-MAX_MGID_ACCOUNTS = 5
+
+MAX_MGID_ACCOUNTS = int(os.getenv('MAX_MGID_ACCOUNTS', 5))
 
 thrive = Thrive(os.getenv('THRIVE_APIKEY'), os.getenv('THRIVE_INSTALLEDID'))
 mgid_instances = []
