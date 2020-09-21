@@ -4,7 +4,7 @@ from typing import Tuple, Union
 
 from bot.patterns import ignore_errors_keyname
 from errors import ErrorList, InternalError
-from extensions import OutputFormatTypes, mgid, thrive, zeropark
+from extensions import OutputFormatTypes, mgid, mgid_instances, thrive, zeropark
 
 from .. import patterns
 from .command import CommandParser
@@ -20,7 +20,8 @@ class MessageHandler:
     }
 
     def __init__(self):
-        self.command_parser = CommandParser(mgid, zeropark, thrive)
+        # self.command_parser = CommandParser(mgid, zeropark, thrive)
+        self.command_parser = CommandParser(mgid_instances, zeropark, thrive)
 
     def handle_message(self, content: str, format_output: bool = True) -> Tuple[Union[list, dict, str]]:
 
