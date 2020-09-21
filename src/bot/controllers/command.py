@@ -3,8 +3,9 @@ import re
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from config import (DEFAULT_ALL_CAMPAIGNS_ALIAS, DEFAULT_OUTPUT_FORMAT,
-                    DEFAULT_CPA_THRESHOLD_INTERVAL, DEFAULT_TIME_INTERVAL)
+from config import (DEFAULT_ALL_CAMPAIGNS_ALIAS,
+                    DEFAULT_CPA_THRESHOLD_INTERVAL, DEFAULT_OUTPUT_FORMAT,
+                    DEFAULT_TIME_INTERVAL)
 from constants import Platforms
 from errors import InvalidCommandError
 from logger import logger
@@ -43,6 +44,7 @@ COMMANDS_PATTERNS = [
     re_patterns.Commands.WIDGETS_KILL_BOT_TRAFFIC,
 ]
 
+
 class DefaultArgument:
     def __init__(self, name: str,
                  value: Optional[Any] = None,
@@ -53,27 +55,38 @@ class DefaultArgument:
 
 
 class CommandParser:
-    def __init__(self, mgid: MGid, zeropark: ZeroPark, thrive: Thrive):
-        self.mgid = mgid
+    def __init__(self, mgid_instances: List[MGid], zeropark: ZeroPark, thrive: Thrive):
+        # self.mgid = mgid
+        self.mgid_instances = mgid_instances
         self.zeropark = zeropark
         self.thrive = thrive
 
     def get_platform_handler(self, platform: Union[Platforms],
                              command: Commands):
-        method_map = {
-            Platforms.MGID: {
-                Commands.list_campaigns: self.mgid.list_campaigns,
-                Commands.stats_campaign: self.mgid.stats_campaign,
-                Commands.spent_campaign: self.mgid.spent_campaign,
-                Commands.campaign_bot_traffic: self.mgid.campaign_bot_traffic,
-                Commands.widgets_stats: self.mgid.widgets_stats,
-                Commands.widgets_top: self.mgid.widgets_top,
-                Commands.widgets_high_cpa: self.mgid.widgets_high_cpa,
-                Commands.widgets_low_cpa: self.mgid.widgets_low_cpa,
-                Commands.widgets_kill_longtail: self.mgid.widgets_kill_longtail,
-                Commands.widgets_turn_on_all: self.mgid.widgets_turn_on_all,
-                Commands.widget_kill_bot_traffic: self.mgid.widget_kill_bot_traffic,
-            },
+        def get_mgid_methods_map(mgid: MGid):
+            return {
+                Commands.list_campaigns: mgid.list_campaigns,
+                Commands.stats_campaign: mgid.stats_campaign,
+                Commands.spent_campaign: mgid.spent_campaign,
+                Commands.campaign_bot_traffic: mgid.campaign_bot_traffic,
+                Commands.widgets_stats: mgid.widgets_stats,
+                Commands.widgets_top: mgid.widgets_top,
+                Commands.widgets_high_cpa: mgid.widgets_high_cpa,
+                Commands.widgets_low_cpa: mgid.widgets_low_cpa,
+                Commands.widgets_kill_longtail: mgid.widgets_kill_longtail,
+                Commands.widgets_turn_on_all: mgid.widgets_turn_on_all,
+                Commands.widget_kill_bot_traffic: mgid.widget_kill_bot_traffic,
+            }
+        mgid_method_map = {}
+        for i, mgid_instance in enumerate(self.mgid_instances):
+            mgid_method_map[f'{Platforms.MGID}{i}'] = mgid_method_map[f'{Platforms.MG}{i}'] = get_mgid_methods_map(
+                mgid_instance)
+        # the root instance will be the same as the instance0
+        mgid_method_map[Platforms.MGID] = mgid_method_map[Platforms.MG] = get_mgid_methods_map(
+            self.mgid_instances[0])
+
+        methods_map = {
+            **mgid_method_map,
             Platforms.ZEROPARK: {
                 Commands.list_campaigns: self.zeropark.list_campaigns,
                 Commands.stats_campaign: self.zeropark.stats_campaign,
@@ -93,10 +106,13 @@ class CommandParser:
                 Commands.stats_campaign: self.thrive.stats_campaigns,
             },
         }
-        method_map[Platforms.MG] = method_map[Platforms.MGID]
-        method_map[Platforms.ZP] = method_map[Platforms.ZEROPARK]
-        method_map[Platforms.TRACKER] = method_map[Platforms.THRIVE]
-        return method_map[platform][command]
+
+        # methods_map[Platforms.MG] = methods_map[Platforms.MGID]
+        methods_map[Platforms.ZP] = methods_map[Platforms.ZEROPARK]
+        methods_map[Platforms.TRACKER] = methods_map[Platforms.THRIVE]
+        if platform not in methods_map:
+            raise InvalidCommandError(command=platform)
+        return methods_map[platform][command]
 
     def parse_command(self, message: str) -> Tuple[Callable, Dict[str, Union[str, List[str]]]]:
         command_args = {}
@@ -120,7 +136,6 @@ class CommandParser:
         ]:
             if optional_arg in group_dict:
                 command_args[optional_arg] = group_dict[optional_arg]
-
 
         # params with default value
         for default_arg in [
