@@ -1,3 +1,4 @@
+import re
 from enum import Enum
 from typing import Dict, List, Optional, Union
 
@@ -17,12 +18,13 @@ class CampaignBaseData(BaseModel):
 
     @property
     def target_type(self) -> str:
-        for target_type in [
+        for _target_type in [
             TargetType.DESKTOP,
+            TargetType.MOB,
             TargetType.MOBILE,
         ]:
-            if target_type in self.name:
-                return target_type.value
+            if re.search(f'(?<!\\w){_target_type}(?!\\w)', self.name, re.IGNORECASE):
+                return _target_type.value
         return TargetType.BOTH.value
 
     @property
