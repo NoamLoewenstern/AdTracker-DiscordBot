@@ -12,7 +12,8 @@ from logger import logger
 
 class TargetType(str, Enum):
     DESKTOP = 'DESKTOP'
-    MOBILE = 'MOB'
+    MOB = 'MOB'
+    MOBILE = 'MOBILE'
     BOTH = 'BOTH'
 
 
