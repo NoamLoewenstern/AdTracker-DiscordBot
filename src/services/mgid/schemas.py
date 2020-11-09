@@ -6,7 +6,7 @@ from pydantic import Field, validator
 
 from errors import InvalidPlatormCampaignNameError
 
-from ..common.common_service import TargetType
+from ..common.common_service import get_target_type_by_name
 from ..common.platform import get_thrive_id_from_camp
 from ..common.schemas import BaseModel
 
@@ -18,14 +18,7 @@ class CampaignBaseData(BaseModel):
 
     @property
     def target_type(self) -> str:
-        for _target_type in [
-            TargetType.DESKTOP,
-            TargetType.MOB,
-            TargetType.MOBILE,
-        ]:
-            if re.search(f'(?<!\\w){_target_type}(?!\\w)', self.name, re.IGNORECASE):
-                return _target_type.value
-        return TargetType.BOTH.value
+        return get_target_type_by_name(self.name)
 
     @property
     def thrive_id(self):
@@ -196,6 +189,9 @@ class MergedWithThriveStats(CampaignStat):
             # 'cpa': self.cpa,
             'revenue': self.revenue,
         }
+
+
+MergedWithThriveStatsFields = list(MergedWithThriveStats.__fields__.keys())
 
 
 class WidgetSourceStats(BaseModel):

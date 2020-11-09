@@ -54,10 +54,6 @@ class SourceGETResponse(BaseModel):
     data: List[Source]
 
 
-class CampaignNameID(BaseModel):
-    data: List[Source]
-
-
 class TagArray(BaseModel):
     tagId: int
     name: str
@@ -95,38 +91,12 @@ class CampaignGeneralInfo(CampaignBasicInfo):
     # aiData
 
 
-class CampaignExtendedInfoStats(CampaignGeneralInfo):
-    clicks: int
-    thrive_clicks: int = Field(alias='clicks')
-    cost: float
-    cpc: float
-    thru: int
-    conv: int
-    rev: float
-    ctr: float
-    profit: float
-    roi: float
-    epc: float
-    cvr: float
-    epa: float
-
-    @property
-    def cpa(self):
-        if self.conv == 0:
-            return 0
-        return self.cost / self.conv
-
-    def dict(self, *args, **kwargs):
-        return {**super().dict(*args, **kwargs),
-                'cpa': self.cpa}
-
-
 class SideCarTimeData(BaseModel):
-    start: int
-    end: int
+    start: int = None
+    end: int = None
     from_: str
     to: str
-    timezone: str
+    timezone: str = None
 
     class Config:
         fields = {
@@ -135,13 +105,11 @@ class SideCarTimeData(BaseModel):
 
 
 class CampaignStats(BaseModel):
-    data: List[CampaignExtendedInfoStats]
-    sidecar: SideCarTimeData
-
-
-class WidgetStats(BaseModel):
-    value: str
-    id: str = Field(alias='value')
+    id: str = None
+    value: str = None
+    period: str = None
+    # id: str = Field(alias='value')
+    device_type: str = Field(None, alias='value')
     clicks: int
     thrive_clicks: int = Field(alias='clicks')
     cost: float
@@ -167,5 +135,27 @@ class WidgetStats(BaseModel):
                 'cpa': self.cpa}
 
 
-class WidgetStatsGETResponse(BaseModel):
-    __root__: List[WidgetStats]
+class CampaignStatsByDevice(CampaignStats):
+    device_type: str = Field(None, alias='value')
+
+
+class WidgetsStats(CampaignStats):
+    widget_id: str = Field(None, alias='value')
+
+
+class CampaignStatsResponse(BaseModel):
+    __root__: List[CampaignStats]
+
+
+class CampaignInfoAndStats(CampaignGeneralInfo, CampaignStats):
+    pass
+
+
+class CampaignMetricsStatsResponse(BaseModel):
+    data: List[CampaignStats]
+    sidecar: SideCarTimeData
+
+
+class CampaignInfoAndStatsResponse(BaseModel):
+    data: List[CampaignInfoAndStats]
+    sidecar: SideCarTimeData

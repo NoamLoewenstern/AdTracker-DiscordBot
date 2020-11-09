@@ -1,9 +1,9 @@
 import csv
 import re
 import tempfile
-from functools import wraps
+from functools import reduce, wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Union
+from typing import Any, Callable, Dict, Iterable, List, Tuple, Union
 
 GENERAL_RESP_TYPE = Union[str, List[Dict[Union[str, int], Union[str, int, float, bool]]]]
 
@@ -40,21 +40,25 @@ def chunks(lst: Iterable, n: int):
         yield lst[i:i + n]
 
 
-def merge_objs(obj1: Dict[str, Dict], obj2: Dict[str, Dict]) -> List[Dict]:
+def merge_objs(*list_dicts: List[Dict], merge_types: Tuple[type] = (int, float)) -> dict:
     """ MERGED 2 dictionaries with the (int, float) types only.
     Every other Value Type will be OVERRIDDEN with the value from the SECOND DICT."""
-    common_keys = set(obj1) & set(obj2)
+    def concat_values_by_key(key, *dicts):
+        def concat(val1, val2): return val1 + val2
+        all_values = list(d[key] for d in dicts)
+        return reduce(concat, all_values)
+
+    common_keys = reduce(lambda d1, d2: set(d1) & set(d2), list_dicts)
 
     combined = {
-        # merge object's content if have the same key.
-        key: obj1[key] + obj2[key]
+        # merge objects' *content*, if have the same key and are of type 'merge_types'
+        key: concat_values_by_key(key, *list_dicts)
         for key in common_keys
-        if isinstance(obj1[key], (int, float))
+        if isinstance(list_dicts[0][key], merge_types)
     }
 
     merged_obj = {
-        **obj1,
-        **obj2,
+        **reduce(lambda d1, d2: {**d1, **d2}, list_dicts),
         **combined,
     }
     return merged_obj

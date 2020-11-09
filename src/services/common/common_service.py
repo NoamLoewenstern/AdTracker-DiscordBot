@@ -1,9 +1,9 @@
 import json
+import re
 from enum import Enum
 from typing import Callable, List, Literal, Optional, Union
 
 import requests
-
 from constants import DEFAULT_TIMEOUT_API_REQUEST
 from errors import APIError
 from errors.network import AuthError
@@ -12,9 +12,22 @@ from logger import logger
 
 class TargetType(str, Enum):
     DESKTOP = 'DESKTOP'
+    DESK = 'DESK'
     MOB = 'MOB'
     MOBILE = 'MOBILE'
     BOTH = 'BOTH'
+
+
+def get_target_type_by_name(name: str) -> TargetType:
+    is_desktop = bool(
+        re.search(f'(?<!\\w)({TargetType.DESK}|{TargetType.DESKTOP})(?!\\w)', name, re.IGNORECASE))
+    is_mobile = bool(re.search(f'(?<!\\w)({TargetType.MOB}|{TargetType.MOBILE})(?!\\w)', name, re.IGNORECASE))
+    if not (is_desktop ^ is_mobile):  # either both true or both false
+        return TargetType.BOTH.value
+    elif is_desktop:
+        return TargetType.DESKTOP.value
+    elif is_mobile:
+        return TargetType.MOBILE.value
 
 
 class CommonService:
@@ -51,8 +64,8 @@ class CommonService:
                            data={**(resp.json_content if resp.is_json else {}),
                                  #  'url': self.base_url + url,
                                  'reason': resp.reason,
-                                 'error': (resp.json_content.get('error', '')
-                                           if resp.is_json else resp.content),
+                                 'error': (resp.json_content.get('error', resp.json_content.get('errors', ''))
+                                           if resp.is_json else resp.content.decode()),
                                  'status_code': resp.status_code},
                            explain=resp.reason)
         if resp.status_code == 403 or resp.json_content and 'NOT LOGGED IN' in json.dumps(resp.json_content).upper():
