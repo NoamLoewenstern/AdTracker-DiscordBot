@@ -1,9 +1,9 @@
 import re
-from typing import Callable, List, Optional, Union
+from typing import Callable, List, Literal, Optional, Union
 
 from pydantic import Field, validator
 
-from ..common.common_service import TargetType
+from ..common.common_service import get_target_type_by_name
 from ..common.platform import get_thrive_id_from_camp
 from ..common.schemas import BaseModel
 
@@ -14,14 +14,7 @@ class CampaignBaseData(BaseModel):
 
     @property
     def target_type(self) -> str:
-        for _target_type in [
-            TargetType.DESKTOP,
-            TargetType.MOB,
-            TargetType.MOBILE,
-        ]:
-            if re.search(f'(?<!\\w){_target_type}(?!\\w)', self.name, re.IGNORECASE):
-                return _target_type.value
-        return TargetType.BOTH.value
+        return get_target_type_by_name(self.name)
 
     @property
     def thrive_id(self):
@@ -40,7 +33,7 @@ class Budget(BaseModel):
 
 class State(BaseModel):
     state: str
-    actions: List[Union["EDIT", "PAUSE", "CHANGE_BID", "DUPLICATE", "DELETE"]]
+    actions: List[Literal['EDIT', 'PAUSE', 'CHANGE_BID', 'DUPLICATE', 'DELETE']]
 
 
 class Details(CampaignBaseData):

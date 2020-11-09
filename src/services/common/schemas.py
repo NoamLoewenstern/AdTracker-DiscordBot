@@ -1,8 +1,8 @@
+import re
 from typing import Any, Type
 
-from pydantic import BaseModel
-
 from errors import PydanticParseObjError
+from pydantic import BaseModel
 
 
 class BaseModelSubscriptable(BaseModel):
@@ -18,9 +18,8 @@ class BaseModelSubscriptable(BaseModel):
     def __contains__(self, item):
         return hasattr(self, item)
 
-
     @classmethod
-    def parse_obj(cls: Type['Model'], obj: Any) -> 'Model':
+    def parse_obj(cls: BaseModel, obj: Any) -> BaseModel:
         try:
             return super(BaseModelSubscriptable, cls).parse_obj(obj)
         except Exception as e:

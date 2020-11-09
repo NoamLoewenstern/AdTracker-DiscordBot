@@ -8,6 +8,7 @@ from constants import DEBUG
 from errors import APIError, ErrorList
 from errors.platforms import CampaignNameMissingTrackerIDError
 from logger import logger
+
 # from extensions import Thrive
 from utils import (OPERATORS_MAP, alias_param, append_url_params, chunks,
                    format_float, update_url_params)
@@ -151,7 +152,9 @@ class ZeroPark(PlatformService):
             if bot_traffic != 100:
                 bot_traffic = format_float(bot_traffic)
             result.append({
-                stat['name']: f'{bot_traffic}%',
+                'id': stat['id'],
+                'name': stat['name'],
+                'bot': f'{bot_traffic}%',
                 'thrive_clicks': stat['thrive_clicks'],
                 'platform_clicks': stat['platform_clicks'],
             })
@@ -170,7 +173,9 @@ class ZeroPark(PlatformService):
             if bot_traffic != 100:
                 bot_traffic = format_float(bot_traffic)
             result.append({
-                stat['name']: f'{bot_traffic}%',
+                'id': stat['id'],
+                'name': stat['name'],
+                'bot': f'{bot_traffic}%',
                 'thrive_clicks': stat['thrive_clicks'],
                 'platform_clicks': stat['platform_clicks'],
             })

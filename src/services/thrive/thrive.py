@@ -1,17 +1,22 @@
 # import os
 from typing import Dict, List, Literal, Optional, Union
 
+from errors import ErrorDict
 from logger import logger
+from services.common.common_service import TargetType
+
 from utils import alias_param, append_url_params, update_url_params
+from utils.helpers import merge_objs
 
 from ..common import CommonService
 from ..common.utils import add_interval_startend_dates, filter_result_by_fields
 from . import urls
-from .config import WIDGET_KEYS_MAPPER
-from .schemas import (CampaignExtendedInfoStats, CampaignGeneralInfo,
-                      CampaignGETResponse, CampaignNameID, CampaignStats,
-                      Source, SourceGETResponse, WidgetStats,
-                      WidgetStatsGETResponse)
+from .config import CAMP_STATS_VARIABLE_TYPES, STATS_BY_VARIABLE_MAPPER
+from .schemas import (CampaignGeneralInfo, CampaignGETResponse,
+                      CampaignInfoAndStats, CampaignInfoAndStatsResponse,
+                      CampaignMetricsStatsResponse, CampaignNameID,
+                      CampaignStats, CampaignStatsByDevice,
+                      CampaignStatsResponse, Source, SourceGETResponse)
 from .utils import fix_date_interval_value, subids_to_uids
 
 
@@ -83,7 +88,7 @@ class Thrive(CommonService):
                       campaign_id: str,
                       fields: List[str] = ['name', 'id', 'sourceName', 'campCount'],
                       **kwargs) -> list:
-        url = urls.CAMPAIGNS.CAMPAIGN_INFO
+        url = urls.CAMPAIGNS.GENERAL_INFO
         url = update_url_params(url, {'campId': campaign_id})
         resp = self.get(url).json()
         resp_model = CampaignGeneralInfo(**resp)
@@ -92,23 +97,137 @@ class Thrive(CommonService):
         return result
 
     @adjust_interval_params
-    def stats_campaigns(self, *,
-                        campaign_id: Optional[str] = None,
-                        interval: str = '1d',
-                        fields: List[str] = ['name', 'id', 'clicks', 'thrive_clicks',
-                                             'cost', 'conv', 'ctr', 'roi', 'rev', 'profit', 'cpa'],
-                        **kwargs) -> List[CampaignExtendedInfoStats]:
-        url = urls.CAMPAIGNS.CAMPAIGN_STATS
+    def info_and_stats_campaign(self, *,
+                                campaign_id: str = None,
+                                interval: str = '1d',
+                                startDate: str,
+                                endDate: str,
+                                fields: List[str] = ['name', 'id', 'clicks', 'thrive_clicks',
+                                                     'cost', 'conv', 'ctr', 'roi', 'rev', 'profit', 'cpa'],
+                                **kwargs) -> List[CampaignInfoAndStats]:
+        url = urls.CAMPAIGNS.GENERAL_INFO_WITH_STATS
         if campaign_id:
             url = update_url_params(url, {'camps': campaign_id})
-        url = append_url_params(url, {'range[from]': kwargs['startDate'],
-                                      'range[to]': kwargs['endDate']})
+        url = append_url_params(url, {'range[from]': startDate,
+                                      'range[to]': endDate})
         # TODO implement the 'time_range' for request.
-        # it has some problems.
+
         resp = self.get(url).json()
-        resp_model = CampaignStats(**resp)
+        resp_model = CampaignInfoAndStatsResponse(**resp)
         result = filter_result_by_fields(resp_model.data, fields)
         return result
+
+    @adjust_interval_params
+    def stats_campaigns(self, *,
+                        campaign_id: str = None,
+                        interval: str = '1d',
+                        startDate: str,
+                        endDate: str,
+                        fields: List[str] = ['name', 'id', 'clicks', 'thrive_clicks',
+                                             'cost', 'conv', 'ctr', 'roi', 'rev', 'profit', 'cpa'],
+                        **kwargs) -> List[CampaignStats]:
+        url = urls.CAMPAIGNS.GENERAL_INFO_WITH_STATS
+        if campaign_id:
+            url = update_url_params(url, {'camps': campaign_id})
+        url = append_url_params(url, {'range[from]': startDate,
+                                      'range[to]': endDate})
+        # TODO implement the 'time_range' for request.
+
+        resp = self.get(url).json()
+        resp_model = CampaignInfoAndStatsResponse(**resp)
+        result = filter_result_by_fields(resp_model.data, fields)
+        return result
+
+    @adjust_interval_params
+    def stats_campaigns_by_variable(self, *,
+                                    campaign_id: str = None,
+                                    interval: str = '1d',
+                                    startDate: str,
+                                    endDate: str,
+                                    key: CAMP_STATS_VARIABLE_TYPES,
+                                    sort_key: str = 'conv',
+                                    fields: List[str] = ['id', 'name', 'value', 'period', 'clicks', 'thrive_clicks', 'cost', 'cpc',
+                                                         'thru', 'conv', 'rev', 'ctr', 'profit', 'roi', 'epc', 'cvr', 'epa', 'cpa'],
+
+                                    **kwargs) -> List[CampaignStats]:
+        def validate_input():
+            allowed_fields = list(CampaignStats.__fields__)
+            assert sort_key in allowed_fields, f"'sort_key' must be of allowed fields: {allowed_fields}"
+            assert sort_key in fields, f"'sort_key' must be of allowed fields passed to method: {fields}"
+            assert key in STATS_BY_VARIABLE_MAPPER, f'variable type must be type of: {CAMP_STATS_VARIABLE_TYPES}'
+        validate_input()
+
+        url = urls.CAMPAIGNS.STATS_BY_VAR
+        if campaign_id:
+            url = update_url_params(url, {'camps': campaign_id})
+
+        # TODO implement the 'time_range' for request.
+        url = append_url_params(url, {'range[from]': startDate,
+                                      'range[to]': endDate,
+                                      'key': STATS_BY_VARIABLE_MAPPER[key.lower()]})
+
+        resp = self.get(url).json()
+        list_stats_model = CampaignStatsResponse.parse_obj(resp).__root__
+        if not list_stats_model:
+            return []
+        list_stats_model.sort(key=lambda widget: widget[sort_key])
+        if campaign_id:
+            for stat_model in list_stats_model:
+                stat_model.id = campaign_id
+
+        result = filter_result_by_fields(list_stats_model, fields)
+        return result
+
+    def stats_campaign_by_device_type(self, *,
+                                      campaign_id: str,
+                                      device: TargetType = TargetType.BOTH,
+                                      **kwargs) -> CampaignStatsByDevice:
+        assert campaign_id, 'campaign_id must not be empty or None'
+        stats: List[CampaignStats] = self.stats_campaigns_by_variable(
+            campaign_id=campaign_id,
+            key=CAMP_STATS_VARIABLE_TYPES.by_device_type,
+            **kwargs)
+        if not stats:
+            return {}
+        if device.lower() == TargetType.BOTH.lower():
+            merged_stats = merge_objs(*stats)
+            merged_stats['value'] = TargetType.BOTH
+            ret_stats = CampaignStatsByDevice(**merged_stats)
+        else:
+            filtered_stats = [stat for stat in stats
+                              if stat['value'].lower() == device.lower()]
+            if stats and not filtered_stats:
+                raise ValueError('No Device Type "{device}" in Campaign Stats: {stat}')
+            filtered_stats = filtered_stats[0]
+            filtered_stats['value'] = device.upper()
+            ret_stats = CampaignStatsByDevice(**filtered_stats)
+
+        return {
+            **ret_stats.dict(),
+            'id': campaign_id,
+        }
+
+    def stats_widgets(self, *,
+                      platform_name: Literal['mgid', 'zeropark'],
+                      campaign_id: str,
+                      **kwargs) -> List[CampaignStats]:
+        def validate_input():
+            # if 'key' is 'mgid' or 'zeropark' -> it means that it's searching the WIDGETS data INSIDE campaign.
+            # means must come with campaign_id:
+            # if key != CAMP_STATS_VARIABLE_TYPES.by_device_type:
+            #     assert campaign_id, 'if requesting widgets - must pass campaign_id.'
+            platforms = ['mgid', 'zeropark']
+            assert platform_name.lower() in platforms, \
+                f"'platform_name' passed by 'key' must be of types: {platforms}"
+        validate_input()
+        platform_widgets_var_type: CAMP_STATS_VARIABLE_TYPES
+        platform_widgets_var_type = getattr(CAMP_STATS_VARIABLE_TYPES, f'{platform_name.lower()}_widgets')
+        widgets_stats: List[CampaignStats] = self.stats_campaigns_by_variable(campaign_id=campaign_id,
+                                                                              key=platform_widgets_var_type,
+                                                                              **kwargs)
+        # self._remove_unknown_ids(resp_model.__root__)
+
+        return widgets_stats
 
     def _remove_unknown_ids(self, list_objects: List[Dict['id', str]], platform='') -> None:
         unknown_widgets_ids = []
@@ -117,36 +236,8 @@ class Thrive(CommonService):
                 unknown_widgets_ids.append(list_objects.pop(i))
         if unknown_widgets_ids:
             logger.warning(f'[thrive] [widgets_stats] [platform:{platform}] '
-                         f'{len(unknown_widgets_ids)} Unknown Widgets.')
+                           f'{len(unknown_widgets_ids)} Unknown Widgets.')
         return unknown_widgets_ids
 
     def _convert_subids_to_uids(self, list_objects: List[Dict['id', str]]) -> List[Dict['id', str]]:
         return subids_to_uids(list_objects)
-
-    @adjust_interval_params
-    def _widgets_stats(self, *,
-                       platform_name: str,
-                       campaign_id: str,
-                       widget_id: str = None,
-                       interval: str = '1d',
-                       sort_key: str = 'conv',
-                       fields: List[str] = ['id', 'clicks', 'cost', 'conv',
-                                            'cpc', 'cpa', 'rev', 'profit'],
-                       **kwargs,
-                       ) -> List[WidgetStats]:
-        assert platform_name.lower() in WIDGET_KEYS_MAPPER, \
-            f"'platform_name' must be of types: {list(WIDGET_KEYS_MAPPER.keys())}"
-        assert sort_key in WidgetStats.__fields__.keys(), \
-            f"'sort_key' must be of types: {list(WidgetStats.__fields__.keys())}"
-        url = urls.WIDGETS.LIST
-        url = append_url_params(url, {'camps': campaign_id,
-                                      'range[from]': kwargs['startDate'] or '',
-                                      'range[to]': kwargs['endDate'] or '',
-                                      'key': WIDGET_KEYS_MAPPER[platform_name.lower()]})
-        resp = self.get(url).json()
-        resp_model = WidgetStatsGETResponse.parse_obj(resp)
-        resp_model.__root__.sort(key=lambda widget: widget[sort_key])
-        # self._remove_unknown_ids(resp_model.__root__)
-
-        result = filter_result_by_fields(resp_model.__root__, fields)
-        return result

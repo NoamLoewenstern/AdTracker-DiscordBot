@@ -1,18 +1,20 @@
 import json
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 
-from pydantic.main import BaseModel
-
 from config import DEFAULT_FILTER_NUMBER, MAX_URL_PARAMS_SIZE
 from constants import DEBUG
 from errors import APIError, ErrorList, InvalidEmailPasswordError
+from errors.network import AuthError
 from errors.platforms import CampaignNameMissingTrackerIDError
 # import os
 from logger import logger
+from pydantic.main import BaseModel
+
 # from services.thrive import Thrive
 from utils import (OPERATORS_MAP, alias_param, append_url_params, chunks,
                    format_float, update_url_params)
 
+from ..common.common_service import TargetType, get_target_type_by_name
 from ..common.platform import PlatformService
 from ..common.schemas import BaseModel
 from ..common.utils import (add_interval_startend_dates, fields_list_hook,
@@ -24,8 +26,8 @@ from .schemas import (CampaignBaseData, CampaignData, CampaignGETResponse,
                       CampaignStat, CampaignStatDayDetailsGETResponse,
                       CampaignStatDayDetailsSummary,
                       CampaignStatsBySiteGETResponse, MergedWithThriveStats,
-                      StatsAllCampaignGETResponse, WidgetSourceStats,
-                      WidgetStats)
+                      MergedWithThriveStatsFields, StatsAllCampaignGETResponse,
+                      WidgetSourceStats, WidgetStats)
 from .utils import (add_token_to_url, fix_date_interval_value,
                     update_client_id_in_url)
 
@@ -41,19 +43,49 @@ def adjust_dateInterval_params(func):
 
 
 class MGid(PlatformService):
-    def __init__(self, client_id: str, token: str, thrive, *args, **kwargs):
+    def __init__(self,
+                 client_id: str,
+                 token: str,
+                 thrive: 'Thrive',
+                 email: str = '',
+                 password: str = '',
+                 *args,
+                 **kwargs):
+        self.token = token
         super().__init__(thrive=thrive,
                          base_url=urls.CAMPAIGNS.BASE_URL,
                          url_hooks=[
-                             lambda url: add_token_to_url(url, token),
+                             lambda url: add_token_to_url(url, self.token),
                              lambda url: update_client_id_in_url(url, client_id)
                          ],
                          platform='MGID',
+                         email=email,
+                         password=password,
                          *args, **kwargs)
+
+    def renew_token(self):
+        if not self.email or not self.password:
+            raise AuthError(
+                platform='MGID',
+                message='Need To Renew Token OR Enter email+password in ENV-VARIABLES For This Account.',
+                explain='Token Error')
+        url = urls.TOKEN.GET_CURRENT
+        url = update_url_params(url, {'email': self.email, 'password': self.password})
+        result = self.post(url).json()
+        self.token = result['token']
+
+    def _req(self, *args, **kwargs):
+        try:
+            return super()._req(*args, **kwargs)
+        except APIError as e:
+            if 'ERROR_AUTHENTICATION_SIGNING_IN_ERROR' in json.dumps(e.data):
+                self.renew_token()
+                return super()._req(*args, **kwargs)
+            raise e
 
     @property
     def campaigns(self):
-        if self._campaigns is None:
+        if not self._campaigns:
             campaigns = self.list_campaigns(fields=['id', 'name', 'status',
                                                     'statistics', 'spent', 'target_type'])
             self._campaigns = self._update_campaigns(campaigns)
@@ -116,12 +148,14 @@ class MGid(PlatformService):
     def stats_campaign_pure_platform(self,
                                      campaign_id: str = None,
                                      dateInterval: DateIntervalParams = 'today',
+                                     startDate: str = '',
+                                     endDate: str = '',
                                      as_json=True,
                                      **kwargs) -> List[CampaignStat]:
         url = urls.CAMPAIGNS.STATS_DAILY
         url = update_url_params(url, {'dateInterval': dateInterval,
-                                      'startDate': kwargs.get('startDate') or '',
-                                      'endDate': kwargs.get('endDate') or ''})
+                                      'startDate': startDate,
+                                      'endDate': endDate})
         resp = self.get(url).json()
         resp_model = StatsAllCampaignGETResponse(**resp)
         stats = resp_model.campaigns_stat.values()
@@ -136,24 +170,46 @@ class MGid(PlatformService):
     @fields_list_hook(MergedWithThriveStats)
     def stats_campaign(self, *,
                        campaign_id: str = None,
-                       fields: Optional[List[str]] = ['id', 'name', 'platform_clicks', 'cost', 'conv',
-                                                      'cpa', 'roi', 'revenue', 'profit', 'target_type'],  # CampaignStat
+                       fields: Optional[List[str]] = MergedWithThriveStatsFields,  # CampaignStat
+                       #    fields: Optional[List[str]] = ['id', 'name', 'platform_clicks', 'cost', 'conv',
+                       #                                   'cpa', 'roi', 'revenue', 'profit', 'target_type'],  # CampaignStat
+
                        # revenue <- rev, profit'],  # MergedWithThriveStats
+                       fetch_stats_by_campaign=False,
                        raise_=not DEBUG,
                        **kwargs) -> Tuple[MergedWithThriveStats, ErrorList]:
-        stats = self.stats_campaign_pure_platform(campaign_id=campaign_id, as_json=False, **kwargs)
+        def tracker_results_by_campaign(campaign_id: str, as_list=True) -> Union['CampaignStatsByDevice', List['CampaignStatsByDevice']]:
+            thrive_id = self.get_thrive_id(self.campaigns[campaign_id], raise_=raise_)
+            camp_name = self.campaigns[campaign_id]['name']
+            device_type: TargetType = get_target_type_by_name(camp_name)
+            tracker_result = self.thrive.stats_campaign_by_device_type(campaign_id=thrive_id,
+                                                                       device=device_type,
+                                                                       time_interval=kwargs.get('time_interval'))
+            return tracker_result
+
+        stats: List[CampaignStat] = self.stats_campaign_pure_platform(campaign_id=campaign_id, **kwargs)
+        ret_error_stats = ErrorList()
         if campaign_id:
             try:
-                thrive_id = self.get_thrive_id(self.campaigns[campaign_id], raise_=raise_)
+                tracker_result = tracker_results_by_campaign(campaign_id, as_list=True)
+                tracker_result = [tracker_result]
             except CampaignNameMissingTrackerIDError as e:
                 return [], ErrorList([e.dict()])
+        elif fetch_stats_by_campaign:  # all campaigns
+            tracker_result = []
+            for campaign_id in self.campaigns:
+                try:
+                    cur_tracker_result = tracker_results_by_campaign(campaign_id, as_list=False)
+                    if cur_tracker_result:
+                        tracker_result.append(cur_tracker_result)
+                except CampaignNameMissingTrackerIDError as e:
+                    ret_error_stats.append(e.dict())
         else:
-            thrive_id = None
-        tracker_result = self.thrive.stats_campaigns(campaign_id=thrive_id,
-                                                     time_interval=kwargs.get('time_interval'))
+            tracker_result = self.thrive.stats_campaigns(time_interval=kwargs.get('time_interval'))
+
         merged_stats, error_stats = self._merge_thrive_stats(stats, tracker_result, MergedWithThriveStats)
         result = filter_result_by_fields(merged_stats, fields)
-        return result, error_stats
+        return result, (ret_error_stats + error_stats)
 
     @fields_list_hook(CampaignStat)
     def spent_campaign(self, *,
@@ -171,19 +227,26 @@ class MGid(PlatformService):
                              campaign_id: str = None,
                              fields: List[str] = ['name', 'id', 'thrive_clicks', 'platform_clicks'],
                              **kwargs) -> Tuple[List, ErrorList]:
-        stats, error_stats = self.stats_campaign(campaign_id=campaign_id, fields=fields, **kwargs)
+        stats, error_stats = self.stats_campaign(
+            campaign_id=campaign_id, fetch_stats_by_campaign=True, fields=fields, **kwargs)
         result = []
         for stat in stats:
+            if not all(key in stat for key in ['name', 'id', 'thrive_clicks', 'platform_clicks']):
+                continue
             bot_traffic = 0
             if stat['platform_clicks'] != 0:
                 bot_traffic = 100 - (stat['thrive_clicks'] / stat['platform_clicks'] * 100)
             if bot_traffic != 100:
                 bot_traffic = format_float(bot_traffic)
             result.append({
-                stat['name']: f'{bot_traffic}%',
+                'id': stat['id'],
+                'name': stat['name'],
+                'bot': f'{bot_traffic}%',
                 'thrive_clicks': stat['thrive_clicks'],
                 'platform_clicks': stat['platform_clicks'],
             })
+        if not result:
+            error_stats.append({'MSG': 'NO RESULT, Try Widening the Time-Interval'})
         return result, error_stats
 
     def get_api_token(self, **kwargs) -> List:
@@ -199,6 +262,8 @@ class MGid(PlatformService):
                       campaign_id: str,
                       widget_id: str = None,
                       dateInterval: DateIntervalParams = 'today',
+                      startDate: str = '',
+                      endDate: str = '',
                       filter_limit: int = '',
                       sort_key: str = 'conversions',
                       fields: List[str] = ['id', 'spent', 'conversions', 'cpa'],
@@ -214,8 +279,8 @@ class MGid(PlatformService):
         if widget_id:
             url += f'/{widget_id}'
         url = update_url_params(url, {'dateInterval': dateInterval,
-                                      'startDate': kwargs['startDate'] or '',
-                                      'endDate': kwargs['endDate'] or ''})
+                                      'startDate': startDate,
+                                      'endDate': endDate})
         resp = self.get(url).json()
         resp_model = CampaignStatsBySiteGETResponse.parse_obj(resp)
 
@@ -365,8 +430,8 @@ class MGid(PlatformService):
             thrive_id = self.get_thrive_id(self.campaigns[campaign_id], raise_=raise_)
         except CampaignNameMissingTrackerIDError as e:
             return [], ErrorList([e.dict()])
-        tracker_widgets = self.thrive._widgets_stats(
-            platform_name='MGID',
+        tracker_widgets = self.thrive.stats_widgets(
+            platform_name='mgid',
             campaign_id=thrive_id,
             time_interval=kwargs.get('time_interval', ''),
             sort_key='thrive_clicks',
