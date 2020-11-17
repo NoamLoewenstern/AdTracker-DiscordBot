@@ -1,5 +1,5 @@
 import re
-from typing import Any, Type
+from typing import Any, List, Type
 
 from errors import PydanticParseObjError
 from pydantic import BaseModel
@@ -24,6 +24,11 @@ class BaseModelSubscriptable(BaseModel):
             return super(BaseModelSubscriptable, cls).parse_obj(obj)
         except Exception as e:
             raise PydanticParseObjError(data=str(e))
+
+    @classmethod
+    def fields_list(cls) -> List[str]:
+        from services.common.utils import extract_fields_from_class
+        return extract_fields_from_class(cls)
 
 
 BaseModel = BaseModelSubscriptable

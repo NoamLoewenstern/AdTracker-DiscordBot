@@ -30,6 +30,15 @@ def get_target_type_by_name(name: str) -> TargetType:
         return TargetType.MOBILE.value
 
 
+def error_in_keys(d: dict) -> Optional[str]:
+    d_keys = [key.lower() for key in d.keys()]
+    error_keys = ['error', 'errors']
+    for err_key in error_keys:
+        if err_key in d_keys:
+            return err_key
+    return None
+
+
 class CommonService:
     def __init__(self, base_url: str, url_hooks: Optional[List[Callable[[str], str]]] = None):
         self.base_url = base_url
@@ -40,6 +49,29 @@ class CommonService:
         session = requests.Session()
         session.headers.update({'Accept': 'application/json'})
         return session
+
+    def _validate_resp(self, resp: requests.models.Response):
+        if not resp.is_json:
+            logger.error('[!] unexpected resp: is not json')
+        # or (resp.is_json and 'errors' in resp.json_content):
+        if not resp.ok:
+            if resp.status_code == 403 or resp.json_content and 'NOT LOGGED IN' in json.dumps(resp.json_content).upper():
+                reason = 'NOT LOGGED IN - Check API-KEYS'
+            else:
+                reason = resp.reason
+            raise APIError(platform='',
+                           data={**(resp.json_content if resp.is_json else {}),
+                                 #  'url': self.base_url + url,
+                                 'reason': reason,
+                                 'error': (resp.json_content.get('error', resp.json_content.get('errors', ''))
+                                           if resp.is_json else resp.content.decode()),
+                                 'status_code': resp.status_code},
+                           explain=resp.reason)
+        if resp.ok and (resp.is_json and (err_key := error_in_keys(resp.json_content))):
+            logger.error(f'[!] resp is ok, but "{err_key}" in response: {resp.json_content["errors"]}')
+            raise APIError(platform='', message=f"'{err_key}' in Response", data={
+                'resp_content': resp.json_content,
+            })
 
     def _req(self,
              url: str,
@@ -53,30 +85,8 @@ class CommonService:
                     f"{self.base_url + url[:200] + '...' if len(url) > 200 else ''} ")
         resp = getattr(self.session, method)(self.base_url + url, *args, **kwargs)
         resp.is_json = 'application/json' in resp.headers['Content-Type']
-        resp.json_content = resp.json() if resp.is_json else None
-        if not resp.is_json:
-            logger.error('[!] unexpected resp: is not json')
-        if resp.ok and (resp.is_json and 'errors' in resp.json_content):
-            logger.error(f'[!] resp is ok, but "Errors" in response: {resp.json_content["errors"]}')
-        # or (resp.is_json and 'errors' in resp.json_content):
-        if not resp.ok:
-            raise APIError(platform='',
-                           data={**(resp.json_content if resp.is_json else {}),
-                                 #  'url': self.base_url + url,
-                                 'reason': resp.reason,
-                                 'error': (resp.json_content.get('error', resp.json_content.get('errors', ''))
-                                           if resp.is_json else resp.content.decode()),
-                                 'status_code': resp.status_code},
-                           explain=resp.reason)
-        if resp.status_code == 403 or resp.json_content and 'NOT LOGGED IN' in json.dumps(resp.json_content).upper():
-            raise AuthError(platform='',
-                            data={**(resp.json_content if resp.is_json else {}),
-                                  #  'url': self.base_url + url,
-                                  'reason': "NOT LOGGED IN - Check API-KEYS",
-                                  'error': (resp.json_content.get('error', '')
-                                            if resp.is_json else resp.content),
-                                  'status_code': resp.status_code},
-                            explain=resp.reason)
+        resp.json_content = resp.json() if resp.is_json else {}
+        self._validate_resp(resp)
         return resp
 
     def get(self, url: str, *args, **kwargs):
