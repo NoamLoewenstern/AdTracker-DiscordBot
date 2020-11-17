@@ -3,6 +3,7 @@ from typing import Dict, List, Literal, Optional, Union
 
 from errors import ErrorDict
 from logger import logger
+from pydantic.main import BaseModel
 from services.common.common_service import TargetType
 
 from utils import alias_param, append_url_params, update_url_params
@@ -16,7 +17,8 @@ from .schemas import (CampaignGeneralInfo, CampaignGETResponse,
                       CampaignInfoAndStats, CampaignInfoAndStatsResponse,
                       CampaignMetricsStatsResponse, CampaignNameID,
                       CampaignStats, CampaignStatsByDevice,
-                      CampaignStatsResponse, Source, SourceGETResponse)
+                      CampaignStatsResponse, CampaignWidgetsStats, Source,
+                      SourceGETResponse)
 from .utils import fix_date_interval_value, subids_to_uids
 
 
@@ -123,8 +125,7 @@ class Thrive(CommonService):
                         interval: str = '1d',
                         startDate: str,
                         endDate: str,
-                        fields: List[str] = ['name', 'id', 'clicks', 'thrive_clicks',
-                                             'cost', 'conv', 'ctr', 'roi', 'rev', 'profit', 'cpa'],
+                        fields: List[str] = CampaignStats.fields_list(),
                         **kwargs) -> List[CampaignStats]:
         url = urls.CAMPAIGNS.GENERAL_INFO_WITH_STATS
         if campaign_id:
@@ -146,16 +147,18 @@ class Thrive(CommonService):
                                     endDate: str,
                                     key: CAMP_STATS_VARIABLE_TYPES,
                                     sort_key: str = 'conv',
-                                    fields: List[str] = ['id', 'name', 'value', 'period', 'clicks', 'thrive_clicks', 'cost', 'cpc',
-                                                         'thru', 'conv', 'rev', 'ctr', 'profit', 'roi', 'epc', 'cvr', 'epa', 'cpa'],
-
+                                    fields: List[str] = CampaignStats.fields_list(),
+                                    ModelType: BaseModel = CampaignStats,
                                     **kwargs) -> List[CampaignStats]:
         def validate_input():
-            allowed_fields = list(CampaignStats.__fields__)
+            allowed_fields = CampaignStats.fields_list()
             assert sort_key in allowed_fields, f"'sort_key' must be of allowed fields: {allowed_fields}"
             assert sort_key in fields, f"'sort_key' must be of allowed fields passed to method: {fields}"
             assert key in STATS_BY_VARIABLE_MAPPER, f'variable type must be type of: {CAMP_STATS_VARIABLE_TYPES}'
         validate_input()
+
+        class ResponseModelType(BaseModel):
+            __root__: List[ModelType]
 
         url = urls.CAMPAIGNS.STATS_BY_VAR
         if campaign_id:
@@ -167,7 +170,8 @@ class Thrive(CommonService):
                                       'key': STATS_BY_VARIABLE_MAPPER[key.lower()]})
 
         resp = self.get(url).json()
-        list_stats_model = CampaignStatsResponse.parse_obj(resp).__root__
+
+        list_stats_model = ResponseModelType.parse_obj(resp).__root__
         if not list_stats_model:
             return []
         list_stats_model.sort(key=lambda widget: widget[sort_key])
@@ -186,6 +190,7 @@ class Thrive(CommonService):
         stats: List[CampaignStats] = self.stats_campaigns_by_variable(
             campaign_id=campaign_id,
             key=CAMP_STATS_VARIABLE_TYPES.by_device_type,
+            ModelType=CampaignStatsByDevice,
             **kwargs)
         if not stats:
             return {}
@@ -210,7 +215,8 @@ class Thrive(CommonService):
     def stats_widgets(self, *,
                       platform_name: Literal['mgid', 'zeropark'],
                       campaign_id: str,
-                      **kwargs) -> List[CampaignStats]:
+                      fields: List[str] = CampaignWidgetsStats.fields_list(),
+                      **kwargs) -> List[CampaignWidgetsStats]:
         def validate_input():
             # if 'key' is 'mgid' or 'zeropark' -> it means that it's searching the WIDGETS data INSIDE campaign.
             # means must come with campaign_id:
@@ -222,22 +228,25 @@ class Thrive(CommonService):
         validate_input()
         platform_widgets_var_type: CAMP_STATS_VARIABLE_TYPES
         platform_widgets_var_type = getattr(CAMP_STATS_VARIABLE_TYPES, f'{platform_name.lower()}_widgets')
-        widgets_stats: List[CampaignStats] = self.stats_campaigns_by_variable(campaign_id=campaign_id,
-                                                                              key=platform_widgets_var_type,
-                                                                              **kwargs)
-        # self._remove_unknown_ids(resp_model.__root__)
+        widgets_stats: List[CampaignWidgetsStats] = self.stats_campaigns_by_variable(campaign_id=campaign_id,
+                                                                                     key=platform_widgets_var_type,
+                                                                                     ModelType=CampaignWidgetsStats,
+                                                                                     fields=fields,
+                                                                                     **kwargs)
 
+        # self._remove_unknown_ids(resp_model.__root__)
         return widgets_stats
 
-    def _remove_unknown_ids(self, list_objects: List[Dict['id', str]], platform='') -> None:
+    def _remove_unknown_ids(self, list_objects: List[Dict[Literal['widget_id'], str]], platform='') -> None:
         unknown_widgets_ids = []
         for i, widget_stat in enumerate(list_objects):
-            if widget_stat['id'] == 'unknown':
+            if widget_stat['widget_id'] == 'unknown':
                 unknown_widgets_ids.append(list_objects.pop(i))
         if unknown_widgets_ids:
             logger.warning(f'[thrive] [widgets_stats] [platform:{platform}] '
                            f'{len(unknown_widgets_ids)} Unknown Widgets.')
         return unknown_widgets_ids
 
-    def _convert_subids_to_uids(self, list_objects: List[Dict['id', str]]) -> List[Dict['id', str]]:
+    def _convert_subids_to_uids(self, list_objects: List[Dict[Literal['widget_id'], str]]
+                                ) -> List[dict]:
         return subids_to_uids(list_objects)

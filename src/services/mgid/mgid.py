@@ -26,8 +26,8 @@ from .schemas import (CampaignBaseData, CampaignData, CampaignGETResponse,
                       CampaignStat, CampaignStatDayDetailsGETResponse,
                       CampaignStatDayDetailsSummary,
                       CampaignStatsBySiteGETResponse, MergedWithThriveStats,
-                      MergedWithThriveStatsFields, StatsAllCampaignGETResponse,
-                      WidgetSourceStats, WidgetStats)
+                      StatsAllCampaignGETResponse, WidgetSourceStats,
+                      WidgetStats)
 from .utils import (add_token_to_url, fix_date_interval_value,
                     update_client_id_in_url)
 
@@ -170,7 +170,7 @@ class MGid(PlatformService):
     @fields_list_hook(MergedWithThriveStats)
     def stats_campaign(self, *,
                        campaign_id: str = None,
-                       fields: Optional[List[str]] = MergedWithThriveStatsFields,  # CampaignStat
+                       fields: Optional[List[str]] = MergedWithThriveStats.fields_list(),  # CampaignStat
                        #    fields: Optional[List[str]] = ['id', 'name', 'platform_clicks', 'cost', 'conv',
                        #                                   'cpa', 'roi', 'revenue', 'profit', 'target_type'],  # CampaignStat
 
@@ -272,8 +272,8 @@ class MGid(PlatformService):
         """
         Get top widgets (sites) {filter_limit} conversions (buy) by {campaign_id}
         """
-        assert sort_key in WidgetStats.__fields__.keys(), \
-            f"'sort_key' must be of types: {list(WidgetStats.__fields__.keys())}"
+        assert sort_key in WidgetStats.fields_list(), \
+            f"'sort_key' must be of types: {WidgetStats.fields_list()}"
 
         url = urls.WIDGETS.LIST.format(campaign_id=campaign_id)
         if widget_id:
@@ -282,14 +282,15 @@ class MGid(PlatformService):
                                       'startDate': startDate,
                                       'endDate': endDate})
         resp = self.get(url).json()
-        resp_model = CampaignStatsBySiteGETResponse.parse_obj(resp)
+        resp_model = CampaignStatsBySiteGETResponse.parse_obj(resp).__root__
 
         widget_stats: List[WidgetStats] = []
-        for camp_widget_stats in resp_model.__root__.values():
+        for camp_widget_stats in resp_model.values():
             for stats in camp_widget_stats.values():
                 for site_id, cur_widget_stats in stats.items():
-                    widget_with_id = WidgetStats(id=site_id,
-                                                 **cur_widget_stats.dict(exclude={'id'}))
+                    widget_with_id = WidgetStats(widget_id=site_id,
+                                                 id=campaign_id,
+                                                 **cur_widget_stats.dict(exclude={'widget_id', 'id'}))
                     widget_stats.append(widget_with_id)
 
         widget_stats.sort(key=lambda widget: widget[sort_key], reverse=True)
@@ -297,7 +298,7 @@ class MGid(PlatformService):
         result = filter_result_by_fields(filtered_widgets, fields)
 
         # Checking if Given WidgetID Exists:
-        if widget_id is not None and widget_id.lower() not in [str(e['id']).lower() for e in result]:
+        if widget_id is not None and widget_id.lower() not in [str(e['widget_id']).lower() for e in result]:
             return [], ErrorList([f"No Such Widget Exists: '{widget_id}'"])
 
         return result
@@ -401,14 +402,15 @@ class MGid(PlatformService):
                               **kwargs) -> dict:
         widgets_stats = self.widgets_stats(campaign_id=campaign_id,
                                            sort_key='spent',
-                                           fields=['id', 'spent'],
+                                           fields=['id', 'widget_id', 'spent'],
                                            dateInterval=dateInterval,
                                            **kwargs)
-        filtered_widgets: List[str] = [widget['id'] for widget in widgets_stats
+        filtered_widgets: List[str] = [widget['widget_id'] for widget in widgets_stats
                                        if widget['spent'] < float(threshold)]
 
         widgets_paused_ids = self._widgets_pause(campaign_id=campaign_id, list_widgets=filtered_widgets)
-        widgets_paused_stats = [widget for widget in widgets_stats if widget['id'] in widgets_paused_ids]
+        widgets_paused_stats = [
+            widget for widget in widgets_stats if widget['id_widget'] in widgets_paused_ids]
         widgets_paused_total_spent = sum(widget['spent'] for widget in widgets_paused_stats)
         time_interval = kwargs.get('time_interval', None)
         return {
@@ -435,22 +437,28 @@ class MGid(PlatformService):
             campaign_id=thrive_id,
             time_interval=kwargs.get('time_interval', ''),
             sort_key='thrive_clicks',
-            fields=['id', 'thrive_clicks'])
+            fields=['id', 'widget_id', 'thrive_clicks'])
         if not tracker_widgets:  # => No Clicks in Time-Range
             return {
                 'Action': '0 Widgets Paused',
-                'Data': '0 Clicks in Given Time-Interval',
+                'Data': '0 Clicks in *Tracker*, in Given Time-Interval',
             }
         self.thrive._remove_unknown_ids(tracker_widgets)
         tracker_widgets = self.thrive._convert_subids_to_uids(tracker_widgets)
-        tracker_widgets_dict = {w['id']: w for w in tracker_widgets}
+        tracker_widgets_dict = {w['widget_id']: w for w in tracker_widgets}
 
         widgets = self.widgets_stats(campaign_id=campaign_id,
                                      sort_key='platform_clicks',
-                                     fields=['id', 'platform_clicks', 'spent'],
+                                     fields=['id', 'widget_id', 'platform_clicks', 'spent'],
                                      **kwargs)
         widgets = [w for w in widgets if w['platform_clicks'] != 0]
-        widgets_dict = {w['id']: w for w in widgets}
+        widgets_dict = {w['widget_id']: w for w in widgets}
+        if not widgets:  # => No Clicks in Time-Range in Platform.
+            return {
+                'Success': False,
+                'Action': '0 Widgets Paused',
+                'Data': '0 Clicks in *Platform*, in Given Time-Interval',
+            }
 
         """
         * the unique ids in the platform -> are all bot-traffic.
@@ -460,10 +468,10 @@ class MGid(PlatformService):
         """
         widgets_ids = set(widgets_dict)
         tracker_widgets_ids = set(tracker_widgets_dict)
-        common_ids = widgets_ids & tracker_widgets_ids
+        # common_ids = widgets_ids & tracker_widgets_ids
 
         just_in_platform = widgets_ids - tracker_widgets_ids
-        just_in_platform_widgets = [w for w in widgets if w['id'] in just_in_platform]
+        just_in_platform_widgets = [w for w in widgets if w['widget_id'] in just_in_platform]
         just_in_platform_widgets_sum_spent = sum(widget['spent'] for widget in just_in_platform_widgets)
 
         just_in_tracker = tracker_widgets_ids - widgets_ids
@@ -481,9 +489,10 @@ class MGid(PlatformService):
             # Assuming thrive_clicks is over 0 (if was 0 - it would not have returned from tracker.)
             bot_percent = 100 - (widget['thrive_clicks'] / widget['platform_clicks'] * 100)
             if bot_percent > int(threshold):
-                bot_widgets_ids.append(widget['id'])
+                bot_widgets_ids.append(widget['widget_id'])
         widgets_paused_ids = self._widgets_pause(campaign_id=campaign_id, list_widgets=bot_widgets_ids)
-        widgets_paused_stats = [widget for widget in merged_widget_data if widget['id'] in widgets_paused_ids]
+        widgets_paused_stats = [
+            widget for widget in merged_widget_data if widget['widget_id'] in widgets_paused_ids]
         widgets_paused_sum_spent = sum(widget['spent'] for widget in widgets_paused_stats)
         time_interval = kwargs.get('time_interval', None)
         # logger.debug(f'[{campaign_id}] Paused Widgets: {len(bot_widgets_ids)} / {len(merged_widget_data)}')
@@ -494,7 +503,7 @@ class MGid(PlatformService):
                                   })
 
         return {
-            'Success': True,
+            # 'Success': True,
             'Action': f'Paused {len(widgets_paused_ids)} Widgets',
             # 'Number Widgets': len(widgets_to_pause),
             f"Stopped Widgets' Spent Amount in Last {time_interval}": format_float(widgets_paused_sum_spent),
