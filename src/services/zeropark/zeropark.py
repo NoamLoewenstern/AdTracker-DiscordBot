@@ -3,7 +3,7 @@ from os import stat
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from config import (DEFAULT_FILTER_NUMBER, DEFAULT_TIME_INTERVAL,
-                    MAX_BODY_SIZE, MAX_URL_PARAMS_SIZE)
+                    MAX_BODY_SIZE, MAX_URL_PARAMS_SIZE, RUNNING_ON_SERVER)
 from constants import DEBUG
 from errors import APIError, ErrorList
 from errors.platforms import CampaignNameMissingTrackerIDError
@@ -108,7 +108,7 @@ class ZeroPark(PlatformService):
                        campaignNameOrId: str = None,
                        fields: Optional[List[str]] = ['id', 'name', 'platform_clicks', 'cost', 'conv',
                                                       'cpa', 'roi', 'revenue', 'profit', 'redirects', 'target_type'],
-                       raise_=not DEBUG,
+                       raise_=not RUNNING_ON_SERVER,
                        **kwargs) -> Tuple[List[ExtendedStats], ErrorList]:
         kwargs.update({
             'campaignNameOrId': campaignNameOrId,
