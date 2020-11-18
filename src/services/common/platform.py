@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
+from config import RUNNING_ON_SERVER
 from constants import DEBUG
 from errors import CampaignNameMissingTrackerIDError, ErrorList
 from pydantic import BaseModel
@@ -41,16 +42,21 @@ class PlatformService(CommonService):
         return self._campaigns
 
     def get_thrive_id(self, campaign: Union[BaseModel, Dict[Literal['id', 'name'], Union[str, int]]],
-                      raise_=not DEBUG) -> Optional[str]:
-        return get_thrive_id_from_camp(campaign=campaign,
-                                       raise_=raise_,
-                                       platform=type(self).__name__)
+                      raise_=not RUNNING_ON_SERVER) -> Optional[str]:
+        thrive_id = get_thrive_id_from_camp(campaign=campaign,
+                                            raise_=raise_,
+                                            platform=type(self).__name__)
+        if thrive_id not in self.thrive.campaigns:
+            raise CampaignNameMissingTrackerIDError(id=thrive_id,
+                                                    name=campaign['name'],
+                                                    platform=self.platform)
+        return thrive_id
 
     def _merge_thrive_stats(self,
                             stats: List[Dict],
                             thrive_results: List[Dict],
                             MergedStatsModel: BaseModel,
-                            raise_=not DEBUG,
+                            raise_=not RUNNING_ON_SERVER,
                             ) -> Tuple[List[BaseModel], ErrorList]:
         merged = []
         error_stats = ErrorList()

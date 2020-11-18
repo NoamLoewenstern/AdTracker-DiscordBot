@@ -31,10 +31,10 @@ def get_target_type_by_name(name: str) -> TargetType:
 
 
 def error_in_keys(d: dict) -> Optional[str]:
-    d_keys = [key.lower() for key in d.keys()]
+    d_lower_keys = {key.lower(): value for key, value in d.items()}
     error_keys = ['error', 'errors']
     for err_key in error_keys:
-        if err_key in d_keys:
+        if d_lower_keys.get(err_key):
             return err_key
     return None
 

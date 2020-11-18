@@ -1,11 +1,13 @@
 import json
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 
-from config import DEFAULT_FILTER_NUMBER, MAX_URL_PARAMS_SIZE
+from config import (DEFAULT_FILTER_NUMBER, MAX_URL_PARAMS_SIZE,
+                    RUNNING_ON_SERVER)
 from constants import DEBUG
 from errors import APIError, ErrorList, InvalidEmailPasswordError
 from errors.network import AuthError
-from errors.platforms import CampaignNameMissingTrackerIDError
+from errors.platforms import (CampaignNameMissingTrackerIDError,
+                              InvalidCampaignIDError)
 # import os
 from logger import logger
 from pydantic.main import BaseModel
@@ -91,8 +93,15 @@ class MGid(PlatformService):
             self._campaigns = self._update_campaigns(campaigns)
         return self._campaigns
 
-    def _removed_deleted(self, campaigns: List[Union[CampaignBaseData, Dict['id', str]]]):
-        return [camp for camp in campaigns if camp['id'] in self.campaigns]
+    def _removed_disabled(self, campaigns: List[Union[CampaignBaseData, Dict['id', str]]]) -> Tuple[list, list]:
+        active_camps = []
+        disabled_camps = []
+        for camp in campaigns:
+            if camp['id'] in self.campaigns:
+                active_camps.append(camp)
+            else:
+                disabled_camps.append(camp)
+        return active_camps, disabled_camps
 
     def _add_names_to_campaigns_values(self, campaigns: List[Union[CampaignBaseData, Dict['id', str]]]):
         for camp in campaigns:
@@ -107,8 +116,9 @@ class MGid(PlatformService):
                        fields: List[str] = ['name', 'id'],
                        case_sensitive=False,
                        **kwargs) -> List[CampaignData]:
+        """ returns the ACTIVE campaigns """
         url = urls.CAMPAIGNS.LIST
-        if campaign_id is not None:
+        if campaign_id:
             url = urls.CAMPAIGNS.LIST + '/' + str(campaign_id)
         if limit and start is not None:
             url = update_url_params(url, {'limit': limit, 'start': start})
@@ -158,10 +168,13 @@ class MGid(PlatformService):
                                       'endDate': endDate})
         resp = self.get(url).json()
         resp_model = StatsAllCampaignGETResponse(**resp)
-        stats = resp_model.campaigns_stat.values()
-        stats = self._removed_deleted(stats)
+        all_stats = resp_model.campaigns_stat.values()
+        stats, disabled_camps = self._removed_disabled(all_stats)
         result = stats = self._add_names_to_campaigns_values(stats)
-        if campaign_id is not None:  # returning specific campaign
+        if campaign_id:  # returning specific campaign
+            if campaign_id in [c['id'] for c in disabled_camps]:
+                raise InvalidCampaignIDError(campaign_id, platform='MGID',
+                                             message=f'Campaign {campaign_id} Is Disabled or Deleted.')
             result = [stat for stat in stats if str(stat['id']) == campaign_id]
         if as_json:
             result = [stat.dict() for stat in result]
@@ -175,39 +188,36 @@ class MGid(PlatformService):
                        #                                   'cpa', 'roi', 'revenue', 'profit', 'target_type'],  # CampaignStat
 
                        # revenue <- rev, profit'],  # MergedWithThriveStats
-                       fetch_stats_by_campaign=False,
-                       raise_=not DEBUG,
-                       **kwargs) -> Tuple[MergedWithThriveStats, ErrorList]:
-        def tracker_results_by_campaign(campaign_id: str, as_list=True) -> Union['CampaignStatsByDevice', List['CampaignStatsByDevice']]:
+                       #    fetch_stats_by_campaign=False,
+                       raise_=not RUNNING_ON_SERVER,
+                       **kwargs) -> Tuple[List[MergedWithThriveStats], ErrorList]:
+        def thrive_stats_by_campaign(campaign_id: str) -> List['thrive.CampaignStats']:
             thrive_id = self.get_thrive_id(self.campaigns[campaign_id], raise_=raise_)
-            camp_name = self.campaigns[campaign_id]['name']
-            device_type: TargetType = get_target_type_by_name(camp_name)
-            tracker_result = self.thrive.stats_campaign_by_device_type(campaign_id=thrive_id,
-                                                                       device=device_type,
-                                                                       time_interval=kwargs.get('time_interval'))
-            return tracker_result
+            tracker_results = self.thrive.stats_campaigns(campaign_id=thrive_id,
+                                                          time_interval=kwargs.get('time_interval'))
+            return tracker_results
 
         stats: List[CampaignStat] = self.stats_campaign_pure_platform(campaign_id=campaign_id, **kwargs)
         ret_error_stats = ErrorList()
+        # query_campaigns = [campaign_id] if campaign_id else list(self.campaigns.keys())
+        # if campaign_id or fetch_stats_by_campaign:  # all campaigns
+        #     tracker_results = []
+        #     for campaign_id in query_campaigns:
+        #         try:
+        #             cur_tracker_result = thrive_stats_by_campaign(campaign_id)
+        #             if cur_tracker_result:
+        #                 tracker_results.append(cur_tracker_result)
+        #         except CampaignNameMissingTrackerIDError as e:
+        #             ret_error_stats.append(e.dict())
         if campaign_id:
             try:
-                tracker_result = tracker_results_by_campaign(campaign_id, as_list=True)
-                tracker_result = [tracker_result]
+                tracker_results = thrive_stats_by_campaign(campaign_id)
             except CampaignNameMissingTrackerIDError as e:
                 return [], ErrorList([e.dict()])
-        elif fetch_stats_by_campaign:  # all campaigns
-            tracker_result = []
-            for campaign_id in self.campaigns:
-                try:
-                    cur_tracker_result = tracker_results_by_campaign(campaign_id, as_list=False)
-                    if cur_tracker_result:
-                        tracker_result.append(cur_tracker_result)
-                except CampaignNameMissingTrackerIDError as e:
-                    ret_error_stats.append(e.dict())
         else:
-            tracker_result = self.thrive.stats_campaigns(time_interval=kwargs.get('time_interval'))
+            tracker_results = self.thrive.stats_campaigns(time_interval=kwargs.get('time_interval'))
 
-        merged_stats, error_stats = self._merge_thrive_stats(stats, tracker_result, MergedWithThriveStats)
+        merged_stats, error_stats = self._merge_thrive_stats(stats, tracker_results, MergedWithThriveStats)
         result = filter_result_by_fields(merged_stats, fields)
         return result, (ret_error_stats + error_stats)
 
@@ -227,8 +237,10 @@ class MGid(PlatformService):
                              campaign_id: str = None,
                              fields: List[str] = ['name', 'id', 'thrive_clicks', 'platform_clicks'],
                              **kwargs) -> Tuple[List, ErrorList]:
-        stats, error_stats = self.stats_campaign(
-            campaign_id=campaign_id, fetch_stats_by_campaign=True, fields=fields, **kwargs)
+        stats, error_stats = self.stats_campaign(campaign_id=campaign_id,
+                                                 #  fetch_stats_by_campaign=True,
+                                                 fields=fields,
+                                                 **kwargs)
         result = []
         for stat in stats:
             if not all(key in stat for key in ['name', 'id', 'thrive_clicks', 'platform_clicks']):
@@ -266,7 +278,7 @@ class MGid(PlatformService):
                       endDate: str = '',
                       filter_limit: int = '',
                       sort_key: str = 'conversions',
-                      fields: List[str] = ['id', 'spent', 'conversions', 'cpa'],
+                      fields: List[str] = ['widget_id', 'spent', 'conversions', 'cpa'],
                       **kwargs,
                       ) -> List[WidgetStats]:
         """
@@ -316,7 +328,7 @@ class MGid(PlatformService):
     def widgets_filter_cpa(self, *,
                            threshold: float,
                            operator: Literal['eq', 'ne', 'lt', 'gt', 'le', 'ge'] = 'le',
-                           fields: List[str] = ['id', 'spent', 'conversions', 'cpa'],
+                           fields: List[str] = ['widget_id', 'spent', 'conversions', 'cpa'],
                            **kwargs,
                            ) -> List[WidgetStats]:
         """
@@ -410,14 +422,14 @@ class MGid(PlatformService):
 
         widgets_paused_ids = self._widgets_pause(campaign_id=campaign_id, list_widgets=filtered_widgets)
         widgets_paused_stats = [
-            widget for widget in widgets_stats if widget['id_widget'] in widgets_paused_ids]
+            widget for widget in widgets_stats if widget['widget_id'] in widgets_paused_ids]
         widgets_paused_total_spent = sum(widget['spent'] for widget in widgets_paused_stats)
         time_interval = kwargs.get('time_interval', None)
         return {
             'Success': True,
             'Action': f'Paused {len(widgets_paused_ids)} Widgets',
             # 'Number Widgets': len(widgets_to_pause),
-            f"Stopped Widgets' Spent Amount in Last {time_interval}": widgets_paused_total_spent,
+            f"Stopped Widgets' Spent Amount in Last {time_interval}": format_float(widgets_paused_total_spent),
             'Data': f'Campaign: {campaign_id}',
         }
 
@@ -426,7 +438,7 @@ class MGid(PlatformService):
                                 campaign_id: str,
                                 threshold: float,
                                 dateInterval: DateIntervalParams = 'today',
-                                raise_=not DEBUG,
+                                raise_=not RUNNING_ON_SERVER,
                                 **kwargs) -> List[Dict]:
         try:
             thrive_id = self.get_thrive_id(self.campaigns[campaign_id], raise_=raise_)

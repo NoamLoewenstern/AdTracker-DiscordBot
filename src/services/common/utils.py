@@ -2,10 +2,11 @@ import os
 import re
 from datetime import date, timedelta
 from functools import wraps
-from typing import Any, Callable, Cl, Dict, List, Literal, Optional, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
 from bot.patterns import (DATE_DAYS_INTERVAL_RE, GET_FIELDS_OPTIONS_KEYNAME,
                           NON_BASE_DATE_INTERVAL_RE)
+from config import RUNNING_ON_SERVER
 from constants import DEBUG
 from errors import CampaignNameMissingTrackerIDError, InvalidCampaignIDError
 from logger import logger
@@ -28,8 +29,8 @@ class CampaignIDsDict(AbstractDictForcedKey):
 
 
 def get_thrive_id_from_camp(campaign: Dict[Literal['id', 'name'], Union[str, int]],
-                            raise_=not DEBUG,
-                            platform='') -> Optional[int]:
+                            raise_=not RUNNING_ON_SERVER,
+                            platform='') -> Optional[str]:
     if not (match := re.match(r'(?P<thrive_camp_id>\d+) ', campaign['name'])):
         err_msg = f"Campaign {campaign['id']} Named '{campaign['name']}' Missing Tracker ID Reference."
         if raise_:

@@ -120,6 +120,7 @@ class CampaignStatDayDetailsGETResponse(BaseModel):
 
 class CampaignStat(CampaignBaseData):
     campaignId: int
+    id: int = Field(alias='campaignId')
     imps: int
     clicks: int
     platform_clicks: int = Field(alias='clicks')

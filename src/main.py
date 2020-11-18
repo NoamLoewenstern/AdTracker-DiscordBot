@@ -108,12 +108,15 @@ async def handle_content(command: str) -> Tuple[str]:
             PydanticParseObjError, BaseCustomException) as err:
         resp = ''
         error_resp = MESSAGE_HANDLER.format_response(err.dict())
+        if not RUNNING_ON_SERVER:
+            traceback.print_tb(err.__traceback__)
     except Exception as err:
         err_msg = getattr(err, 'message', getattr(err, 'data', str(err)))
         internal_error = InternalError(message=err_msg)
         # -> if isinstance BaseCustomException
         logger.error(f'[!] ERROR: {internal_error.dict()}')
-        traceback.print_tb(err.__traceback__)
+        if not RUNNING_ON_SERVER:
+            traceback.print_tb(err.__traceback__)
         resp = ''
         error_resp = MESSAGE_HANDLER.format_response(internal_error.dict())
 

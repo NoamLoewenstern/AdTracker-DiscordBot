@@ -10,11 +10,13 @@ from utils import alias_param, append_url_params, update_url_params
 from utils.helpers import merge_objs
 
 from ..common import CommonService
-from ..common.utils import add_interval_startend_dates, filter_result_by_fields
+from ..common.utils import (CampaignIDsDict, add_interval_startend_dates,
+                            filter_result_by_fields)
 from . import urls
 from .config import CAMP_STATS_VARIABLE_TYPES, STATS_BY_VARIABLE_MAPPER
-from .schemas import (CampaignGeneralInfo, CampaignGETResponse,
-                      CampaignInfoAndStats, CampaignInfoAndStatsResponse,
+from .schemas import (CampaignBasicInfo, CampaignGeneralInfo,
+                      CampaignGETResponse, CampaignInfoAndStats,
+                      CampaignInfoAndStatsResponse,
                       CampaignMetricsStatsResponse, CampaignNameID,
                       CampaignStats, CampaignStatsByDevice,
                       CampaignStatsResponse, CampaignWidgetsStats, Source,
@@ -39,13 +41,25 @@ class Thrive(CommonService):
     def __init__(self, apiKey: str, installId: str):
         super().__init__(base_url=urls.CAMPAIGNS.BASE_URL)
         self.session.headers.update({'apiKey': apiKey, 'installId': installId})
-        self.campaigns: Dict[int, str] = {}
+        self._campaigns: Dict[str, str] = {}
         self.sources: Dict[int, str] = {}
         self.platforms: List[CommonService] = []  # : List[PlatformService]
 
-    def _update_campaigns_cache(self, updated_campaigns: List[CampaignNameID]):
+    def _update_campaigns_cache(self, updated_campaigns: List[Union[dict, CampaignNameID]]):
+        if not self._campaigns:
+            self._campaigns = CampaignIDsDict()
         for campaign in updated_campaigns:
-            self.campaigns[campaign.id] = campaign.name
+            self._campaigns[campaign['id']] = campaign['name']
+        return self._campaigns
+
+    @property
+    def campaigns(self):
+        if not self._campaigns:
+            campaigns = self.list_campaigns()
+            # if still:
+            if not self._campaigns:
+                self._campaigns = self._update_campaigns_cache(campaigns)
+        return self._campaigns
 
     def _update_sources_cache(self, updated_sources: List[Source]):
         for source in updated_sources:
@@ -53,7 +67,7 @@ class Thrive(CommonService):
 
     def list_campaigns(self,
                        search: str = None,
-                       fields: List[Literal['name', 'id', 'source']] = ['name', 'id', 'source'],
+                       fields: CampaignBasicInfo.fields_list() = ['name', 'id', 'source'],
                        **kwargs) -> list:
         url = urls.CAMPAIGNS.LIST_CAMPAIGNS
         if search:
@@ -182,6 +196,7 @@ class Thrive(CommonService):
         result = filter_result_by_fields(list_stats_model, fields)
         return result
 
+    # depricated - not used
     def stats_campaign_by_device_type(self, *,
                                       campaign_id: str,
                                       device: TargetType = TargetType.BOTH,
