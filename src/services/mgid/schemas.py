@@ -1,10 +1,6 @@
-import re
-from enum import Enum
 from typing import Dict, List, Optional, Union
 
 from pydantic import Field, validator
-
-from errors import InvalidPlatormCampaignNameError
 
 from ..common.common_service import get_target_type_by_name
 from ..common.platform import get_thrive_id_from_camp
@@ -124,6 +120,7 @@ class CampaignStatDayDetailsGETResponse(BaseModel):
 
 class CampaignStat(CampaignBaseData):
     campaignId: int
+    id: int = Field(alias='campaignId')
     imps: int
     clicks: int
     platform_clicks: int = Field(alias='clicks')
@@ -191,9 +188,6 @@ class MergedWithThriveStats(CampaignStat):
         }
 
 
-MergedWithThriveStatsFields = list(MergedWithThriveStats.__fields__.keys())
-
-
 class WidgetSourceStats(BaseModel):
     clicks: int
     platform_clicks: int = Field(alias='clicks')
@@ -220,7 +214,8 @@ class WidgetSourceStats(BaseModel):
 
 
 class WidgetStats(WidgetSourceStats):
-    id: str = None  # doesn't exist in the response - added to identify widget with id.
+    id: str = None  # campaign id - doesn't exist in the api-response, added dynamically
+    widget_id: str = None  # doesn't exist in the api-response, added dynamically
     sources: Dict[str, WidgetSourceStats] = None
 
 

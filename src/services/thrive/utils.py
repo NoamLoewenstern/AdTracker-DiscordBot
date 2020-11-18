@@ -1,13 +1,14 @@
-from logger import logger
 import re
-from typing import Dict, List, Union
+from typing import Dict, List, Literal, Union
 from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
 
 from bot.patterns import DATE_DAYS_INTERVAL_RE, NON_BASE_DATE_INTERVAL_RE
 from errors import InvalidCommandFlagError
+from logger import logger
+
 from utils import merge_objs
 
-PATTERN_GET_UID = re.compile(r'^(?P<uid>\d+)s?(?P<subid>\d+)?$', re.IGNORECASE)
+PATTERN_GET_UID = re.compile(r'^(?P<uid>\d+?)s(?P<subid>\d+)$', re.IGNORECASE)
 
 
 def add_token_to_uri(url: str, token: str) -> str:
@@ -50,20 +51,20 @@ def fix_date_interval_value(date_interval: str) -> str:
     raise InvalidCommandFlagError(flag='time_range')
 
 
-def subids_to_uids(list_objects: List[Dict['id', str]]) -> List[Dict['id', str]]:
-    dict_objects = {obj['id']: obj for obj in list_objects}
+def subids_to_uids(list_objects: List[Dict[Literal['widget_id'], str]]
+                   ) -> List[Dict[Literal['widget_id'], str]]:
+    dict_objects = {obj['widget_id']: obj for obj in list_objects}
     new_objects = {}
     for _id, obj in dict_objects.items():
-        match = PATTERN_GET_UID.match(_id)
-        if match is None:
-            logger.warning(f"[subids_to_uids] Not Expected! id is not UID format. id: {_id}")
-            continue
-        uid = match.group('uid')
-        subid = match.group('subid')
-        if subid is not None:
-            obj['id'] = uid
-        if uid not in new_objects:
-            new_objects[uid] = obj
-        else:
-            new_objects[uid] = merge_objs(new_objects[uid], obj)
+        uid = _id
+        if not _id.isnumeric():
+            match = PATTERN_GET_UID.match(_id)
+            if match is None:
+                logger.warning(f"[subids_to_uids] Not Expected widget_id Format. widget_id: {_id}")
+            else:
+                uid = match.group('uid')
+                subid = match.group('subid')
+                if subid is not None:
+                    obj['widget_id'] = uid
+        new_objects[uid] = obj
     return list(new_objects.values())

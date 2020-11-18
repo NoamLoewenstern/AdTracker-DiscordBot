@@ -108,8 +108,6 @@ class CampaignStats(BaseModel):
     id: str = None
     value: str = None
     period: str = None
-    # id: str = Field(alias='value')
-    device_type: str = Field(None, alias='value')
     clicks: int
     thrive_clicks: int = Field(alias='clicks')
     cost: float
@@ -139,7 +137,7 @@ class CampaignStatsByDevice(CampaignStats):
     device_type: str = Field(None, alias='value')
 
 
-class WidgetsStats(CampaignStats):
+class CampaignWidgetsStats(CampaignStats):
     widget_id: str = Field(None, alias='value')
 
 
