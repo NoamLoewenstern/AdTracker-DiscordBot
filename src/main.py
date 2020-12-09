@@ -77,7 +77,7 @@ def format_error_resp(list_error_resp: Union[str, List[Union[str, Dict[str, str]
             del error['message']
             errors_by_message_dict.setdefault(err_msg, []).append(error)
         else:
-            other_errors.append({error})
+            other_errors.append(error)
     formatted_error = []
     for err_msg in sorted(errors_by_message_dict):
         list_errors = errors_by_message_dict[err_msg]
@@ -197,7 +197,7 @@ async def on_message(message):
     except Exception as e:
         logger.error(e)
         result['resp'] = ''
-        result['error_resp'] = MESSAGE_HANDLER.format_response(InternalError.dict())
+        result['error_resp'] = MESSAGE_HANDLER.format_response(InternalError(message=str(e)).dict())
 
     if result['resp']:
         await send_msg(message.channel, result['resp'], result['orig_resp'])
