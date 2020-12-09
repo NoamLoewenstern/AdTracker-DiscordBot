@@ -32,7 +32,7 @@ MAX_NUMBER_LINES = 2000
 
 @client.event
 async def on_ready():
-    start_msg = 'STARTED BOT LISTENING ON ' + 'DEV' if DEV else 'PROD'
+    start_msg = 'STARTED BOT LISTENING ON ' + ('DEV' if DEV else 'PROD')
     print(start_msg)
     logger.info(start_msg)
 

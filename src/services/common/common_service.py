@@ -31,6 +31,8 @@ def get_target_type_by_name(name: str) -> TargetType:
 
 
 def error_in_keys(d: dict) -> Optional[str]:
+    if not isinstance(d, dict):
+        return None
     d_lower_keys = {key.lower(): value for key, value in d.items()}
     error_keys = ['error', 'errors']
     for err_key in error_keys:
