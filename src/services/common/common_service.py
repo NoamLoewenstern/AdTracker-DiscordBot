@@ -69,7 +69,7 @@ class CommonService:
                                            if resp.is_json else resp.content.decode()),
                                  'status_code': resp.status_code},
                            explain=resp.reason)
-        if resp.ok and (resp.is_json and (err_key := error_in_keys(resp.json_content))):
+        if resp.ok and resp.is_json and (err_key := error_in_keys(resp.json_content)):
             logger.error(f'[!] resp is ok, but "{err_key}" in response: {resp.json_content["errors"]}')
             raise APIError(platform='', message=f"'{err_key}' in Response", data={
                 'resp_content': resp.json_content,

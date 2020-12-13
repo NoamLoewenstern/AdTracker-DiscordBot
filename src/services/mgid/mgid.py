@@ -374,10 +374,11 @@ class MGid(PlatformService):
         # if is empty dict - will return empty list
         cur_filterType_widgets = camps_stats[0]['widgetsFilterUid']['widgets'] or []
 
-        if cur_filterType == 'only':
+        if cur_filterType == 'only':  # was whitelist, and not need blacklist, so turning all on.
             self.widgets_turn_on_all(campaign_id=campaign_id)
             return []
         if cur_filterType_widgets and isinstance(cur_filterType_widgets, dict):
+            # was blacklist, so concatening the previous blacklist with new ones
             cur_filterType_widgets = list(cur_filterType_widgets.keys())
         return cur_filterType_widgets
 
@@ -393,25 +394,30 @@ class MGid(PlatformService):
             'Data': f'Campaign: {campaign_id}',
         }
 
-    def _widgets_pause(self, campaign_id: str, list_widgets: List[str]) -> List[str]:
+    def _widgets_pause(self, campaign_id: str, list_widgets: List[str]) -> Tuple[List[str], ErrorList]:
         # CLEANING CURRENT FILTER ON WIDGETS IF IS NOT BLACKLIST
         # if is already blacklist ('except') - method does nothing
         cur_blacklist = self._widgets_init_filter_to_blacklist(campaign_id=campaign_id)
+        error_list = ErrorList()
+
         widgets_to_pause = [widget for widget in list_widgets if widget not in cur_blacklist]
         url = urls.WIDGETS.PAUSE.format(campaign_id=campaign_id)
         for chunk_widgets in chunks(widgets_to_pause, MAX_URL_PARAMS_SIZE):
             url = update_url_params(url, {'widgetsFilterUid': "include,except,{ids}"
                                           .format(ids=','.join(chunk_widgets))})
-            resp = self.patch(url)
-            self._validate_widget_filter_resp(resp)
-        return widgets_to_pause
+            try:
+                resp = self.patch(url)
+                self._validate_widget_filter_resp(resp)
+            except APIError as e:
+                error_list.append(e.dict())
+        return widgets_to_pause, error_list
 
     @adjust_dateInterval_params
     def widgets_kill_longtail(self, *,
                               campaign_id: str,
                               threshold: int,
                               dateInterval: DateIntervalParams = 'today',
-                              **kwargs) -> dict:
+                              **kwargs) -> Tuple[dict, ErrorList]:
         widgets_stats = self.widgets_stats(campaign_id=campaign_id,
                                            sort_key='spent',
                                            fields=['id', 'widget_id', 'spent'],
@@ -420,9 +426,10 @@ class MGid(PlatformService):
         filtered_widgets: List[str] = [widget['widget_id'] for widget in widgets_stats
                                        if widget['spent'] < float(threshold)]
 
-        widgets_paused_ids = self._widgets_pause(campaign_id=campaign_id, list_widgets=filtered_widgets)
-        widgets_paused_stats = [
-            widget for widget in widgets_stats if widget['widget_id'] in widgets_paused_ids]
+        widgets_paused_ids, error_list = self._widgets_pause(campaign_id=campaign_id,
+                                                             list_widgets=filtered_widgets)
+        widgets_paused_stats = [widget for widget in widgets_stats
+                                if widget['widget_id'] in widgets_paused_ids]
         widgets_paused_total_spent = sum(widget['spent'] for widget in widgets_paused_stats)
         time_interval = kwargs.get('time_interval', None)
         return {
@@ -431,7 +438,7 @@ class MGid(PlatformService):
             # 'Number Widgets': len(widgets_to_pause),
             f"Stopped Widgets' Spent Amount in Last {time_interval}": format_float(widgets_paused_total_spent),
             'Data': f'Campaign: {campaign_id}',
-        }
+        }, error_list
 
     @adjust_dateInterval_params
     def widget_kill_bot_traffic(self, *,
@@ -439,7 +446,7 @@ class MGid(PlatformService):
                                 threshold: float,
                                 dateInterval: DateIntervalParams = 'today',
                                 raise_=not RUNNING_ON_SERVER,
-                                **kwargs) -> List[Dict]:
+                                **kwargs) -> Tuple[List[Dict], ErrorList]:
         try:
             thrive_id = self.get_thrive_id(self.campaigns[campaign_id], raise_=raise_)
         except CampaignNameMissingTrackerIDError as e:
@@ -491,10 +498,9 @@ class MGid(PlatformService):
         #             #   f'len(just_in_platform):{len(just_in_platform)}\nlen(just_in_tracker):{len(just_in_tracker)}')
         #             f'{just_in_platform=}\n{just_in_tracker=}')
 
-        merged_widget_data = self._merge_and_update_list_objects(
-            tracker_widgets_dict,
-            widgets_dict,
-            just_common=True)
+        merged_widget_data = self._merge_and_update_list_objects(tracker_widgets_dict,
+                                                                 widgets_dict,
+                                                                 just_common=True)
 
         bot_widgets_ids = []
         for widget in merged_widget_data:
@@ -502,7 +508,8 @@ class MGid(PlatformService):
             bot_percent = 100 - (widget['thrive_clicks'] / widget['platform_clicks'] * 100)
             if bot_percent > int(threshold):
                 bot_widgets_ids.append(widget['widget_id'])
-        widgets_paused_ids = self._widgets_pause(campaign_id=campaign_id, list_widgets=bot_widgets_ids)
+        widgets_paused_ids, error_list = self._widgets_pause(campaign_id=campaign_id,
+                                                             list_widgets=bot_widgets_ids)
         widgets_paused_stats = [
             widget for widget in merged_widget_data if widget['widget_id'] in widgets_paused_ids]
         widgets_paused_sum_spent = sum(widget['spent'] for widget in widgets_paused_stats)
@@ -521,4 +528,4 @@ class MGid(PlatformService):
             f"Stopped Widgets' Spent Amount in Last {time_interval}": format_float(widgets_paused_sum_spent),
             'Data': f'Campaign: {campaign_id}',
             **optional_data,
-        }
+        }, error_list
